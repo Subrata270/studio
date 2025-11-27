@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import CustomSelect from './custom-select';
+import { ToolMultiSelect } from './tool-multi-select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -41,7 +42,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 const formSchema = z.object({
   vendorName: z.string().min(1, 'Vendor name is required.'),
-  toolName: z.string().min(1, 'Please select a tool.'),
+  toolName: z.array(z.string()).min(1, 'Please select at least one tool.'),
   toolNameCustom: z.string().optional(),
   frequency: z.enum(['Monthly', 'Quarterly', 'Yearly', 'One-time']),
   amount: z.coerce.number().min(0, 'Amount must be a positive number.'),
@@ -70,7 +71,7 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
     resolver: zodResolver(formSchema),
     defaultValues: {
       vendorName: '',
-      toolName: '',
+      toolName: [],
       toolNameCustom: '',
       frequency: 'Monthly',
       amount: 0,
@@ -108,16 +109,22 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
 
   // Auto-populate amount based on vendor, tool, and frequency
   useEffect(() => {
-    if (vendorName && toolName && frequency) {
-      const toolPricing = pricingRules[toolName];
-      if (toolPricing) {
-        const multipliers = { Monthly: 1, Quarterly: 3, Yearly: 12, 'One-time': 1 };
-        const newAmount = toolPricing * multipliers[frequency];
-        setValue('amount', newAmount);
-        trigger('amount');
-      } else {
-        setValue('amount', 0); // Default to 0 if no pricing rule exists (e.g., custom tool)
-      }
+    if (vendorName && toolName.length > 0 && frequency) {
+      // Calculate total price for all selected tools
+      let totalAmount = 0;
+      const multipliers = { Monthly: 1, Quarterly: 3, Yearly: 12, 'One-time': 1 };
+      
+      toolName.forEach((tool) => {
+        const toolPricing = pricingRules[tool];
+        if (toolPricing) {
+          totalAmount += toolPricing * multipliers[frequency];
+        }
+      });
+      
+      setValue('amount', totalAmount);
+      trigger('amount');
+    } else {
+      setValue('amount', 0);
     }
   }, [vendorName, toolName, frequency, setValue, trigger]);
 
@@ -162,12 +169,12 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
     }
     
     const costInUSD = values.currency === 'INR' ? values.amount / USD_TO_INR_RATE : values.amount;
-    const finalToolName = values.toolName === 'custom' ? values.toolNameCustom : values.toolName;
+    const finalToolNames = values.toolName.join(', '); // Join multiple tools with comma
     const finalDepartment = getValues('department') === 'add-custom' ? getValues('departmentCustom') : getValues('department');
     const durationInMonths = differenceInCalendarMonths(values.endDate, values.startDate) || 1;
 
     addSubscriptionRequest({
-      toolName: finalToolName!,
+      toolName: finalToolNames,
       duration: durationInMonths,
       cost: costInUSD,
       purpose: values.purpose,
@@ -179,7 +186,7 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
     });
     toast({
         title: "Request Submitted!",
-        description: `Your request for ${finalToolName} has been sent to ${hod.name} for approval.`,
+        description: `Your request for ${finalToolNames} has been sent to ${hod.name} for approval.`,
     })
     form.reset();
     onOpenChange(false);
@@ -216,12 +223,23 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
                         )}
                     />
 
-                    <CustomSelect
-                        form={form}
+                    <FormField
+                        control={form.control}
                         name="toolName"
-                        label="Tool Name"
-                        placeholder="Select a tool"
-                        options={availableTools}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Tool Name</FormLabel>
+                                <FormControl>
+                                    <ToolMultiSelect
+                                        options={availableTools}
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        placeholder="Select tools..."
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
                     />
 
                     <FormField

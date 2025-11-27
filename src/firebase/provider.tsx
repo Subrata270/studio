@@ -5,6 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -66,6 +67,17 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     isUserLoading: true, // Start loading until first auth event
     userError: null,
   });
+
+  // Effect to subscribe to Firebase auth state changes
+  useEffect(() => {
+    if (!auth) return;
+    if (auth.currentUser) return;
+    try {
+      initiateAnonymousSignIn(auth);
+    } catch (error) {
+      console.warn('Anonymous sign-in failed', error);
+    }
+  }, [auth]);
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {

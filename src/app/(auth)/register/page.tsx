@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,20 +27,42 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Role } from '@/lib/types';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle2, Loader2 } from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc';
+import { Separator } from '@/components/ui/separator';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Please enter your name.'),
   email: z.string().email('Please enter a valid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
-  role: z.enum(['employee', 'hod', 'finance', 'admin'], { required_error: 'Please select a role.' }),
+  role: z.enum(['employee', 'hod', 'finance'], { required_error: 'Please select a role.' }),
+  subrole: z.enum(['apa', 'am']).optional(),
   department: z.string().min(1, 'Please enter your department.'),
+}).refine((data) => {
+  // If role is finance, subrole is required
+  if (data.role === 'finance') {
+    return data.subrole !== undefined;
+  }
+  return true;
+}, {
+  message: "Please select a finance role (AM or APA)",
+  path: ["subrole"],
 });
 
 export default function RegisterPage() {
-  const { register } = useAppStore();
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const { register, registerWithGoogle, registerWithMicrosoft, hasFetchedFromFirestore, isSyncing } = useAppStore((state) => ({
+    register: state.register,
+    registerWithGoogle: state.registerWithGoogle,
+    registerWithMicrosoft: state.registerWithMicrosoft,
+    hasFetchedFromFirestore: state.hasFetchedFromFirestore,
+    isSyncing: state.isSyncing,
+  }));
   const { toast } = useToast();
   const router = useRouter();
+  const isStoreReady = hasFetchedFromFirestore && !isSyncing;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,20 +74,106 @@ export default function RegisterPage() {
     },
   });
 
+  const selectedRole = form.watch("role");
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    try {
-      register(values);
+    if (!isStoreReady) {
       toast({
-        title: "Registration Successful!",
-        description: `Welcome, ${values.name}! You can now log in.`,
+        variant: 'destructive',
+        title: 'Sync in progress',
+        description: 'Please wait until data sync completes.',
       });
-      router.push(`/login/${values.role}`);
+      return;
+    }
+
+    try {
+      const userData = {
+        ...values,
+        subrole: values.subrole || null, // Ensure subrole is null if not provided
+      };
+      register(userData);
+      setIsSuccess(true);
+      toast({
+        title: "Registration Successful! ✨",
+        description: `Welcome, ${values.name}! Redirecting to login...`,
+      });
+      setTimeout(() => {
+        router.push(`/login/${values.role}`);
+      }, 2000);
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Registration Failed",
         description: error.message || "An unexpected error occurred.",
       });
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    if (!isStoreReady) {
+      toast({
+        variant: 'destructive',
+        title: 'Sync in progress',
+        description: 'Please wait until data sync completes.',
+      });
+      return;
+    }
+
+    setIsPending(true);
+    try {
+      const user = await registerWithGoogle();
+      if (user) {
+        setIsSuccess(true);
+        toast({
+          title: "Google Registration Successful! ✨",
+          description: `Welcome, ${user.name}! Redirecting to dashboard...`,
+        });
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Google Registration Failed",
+        description: error.message || "Could not register with Google.",
+      });
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const handleMicrosoftRegister = async () => {
+    if (!isStoreReady) {
+      toast({
+        variant: 'destructive',
+        title: 'Sync in progress',
+        description: 'Please wait until data sync completes.',
+      });
+      return;
+    }
+
+    setIsPending(true);
+    try {
+      const user = await registerWithMicrosoft();
+      if (user) {
+        setIsSuccess(true);
+        toast({
+          title: "Microsoft Registration Successful! ✨",
+          description: `Welcome, ${user.name}! Redirecting to dashboard...`,
+        });
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Microsoft Registration Failed",
+        description: error.message || "Could not register with Microsoft.",
+      });
+    } finally {
+      setIsPending(false);
     }
   };
 
@@ -139,10 +248,9 @@ export default function RegisterPage() {
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="employee">Employee</SelectItem>
-                            <SelectItem value="hod">HOD</SelectItem>
+                            <SelectItem value="employee">POC (Department POC)</SelectItem>
+                            <SelectItem value="hod">HOD (Head of Department)</SelectItem>
                             <SelectItem value="finance">Finance</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                         </Select>
                         <FormMessage />
@@ -163,15 +271,115 @@ export default function RegisterPage() {
                     )}
                 />
                </div>
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Registering...' : 'Create Account'}
+               
+               <AnimatePresence>
+                 {selectedRole === 'finance' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="subrole"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Finance Role</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your finance role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="apa">APA (Accounts Payable Associate)</SelectItem>
+                              <SelectItem value="am">AM (Account Manager)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </motion.div>
+                )}
+               </AnimatePresence>
+              
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || !isStoreReady || isSuccess}>
+                {form.formState.isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : isSuccess ? (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Account Created!
+                  </>
+                ) : (
+                  'Create Account'
+                )}
               </Button>
             </form>
           </Form>
-          <div className="mt-4 text-center text-sm">
-            Already have an account?{" "}
-            <Link href="/" className="underline">
-              Go to Login Portals
+          
+          <div className="relative my-4">
+            <Separator />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+              OR CONTINUE WITH
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleGoogleRegister}
+              disabled={isPending || isSuccess || !isStoreReady}
+            >
+              {isPending ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <FcGoogle className="mr-2 h-5 w-5" />
+                  Sign up with Google
+                </>
+              )}
+            </Button>
+
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleMicrosoftRegister}
+              disabled={isPending || isSuccess || !isStoreReady}
+            >
+              {isPending ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <span className="mr-2 text-lg">🪟</span>
+                  Sign up with Microsoft
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="mt-6 text-center">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">
+                  Already registered?
+                </span>
+              </div>
+            </div>
+            <Link href="/">
+              <Button variant="outline" className="mt-4 w-full">
+                Go to Login
+              </Button>
             </Link>
           </div>
         </CardContent>

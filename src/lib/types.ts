@@ -13,6 +13,7 @@ export interface User {
   subrole: SubRole;
   department: string;
   googleUid?: string;
+  microsoftUid?: string;
 }
 
 export type SubscriptionStatus = 'Pending' | 'Approved' | 'Declined' | 'Active' | 'Expired' | 'ForwardedToAM' | 'VerifiedByAM' | 'PaymentCompleted';

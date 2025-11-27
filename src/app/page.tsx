@@ -31,6 +31,7 @@ import Logo from "@/components/logo"
 import { useAppStore } from "@/store/app-store"
 import { Role, SubRole } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -48,8 +49,13 @@ const portalMapping: { [key: string]: { role: Role; path: string } } = {
 export default function UnifiedLoginPage() {
   const [isPending, setIsPending] = useState(false)
   const router = useRouter()
-  const { login } = useAppStore()
+  const { login, hasFetchedFromFirestore, isSyncing } = useAppStore((state) => ({
+    login: state.login,
+    hasFetchedFromFirestore: state.hasFetchedFromFirestore,
+    isSyncing: state.isSyncing,
+  }))
   const { toast } = useToast()
+  const isStoreReady = hasFetchedFromFirestore && !isSyncing
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,6 +70,15 @@ export default function UnifiedLoginPage() {
   const selectedPortal = form.watch("portal")
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (!isStoreReady) {
+      toast({
+        variant: "destructive",
+        title: "Sync in progress",
+        description: "Please wait until data sync completes.",
+      })
+      return
+    }
+
     setIsPending(true)
     const portalInfo = portalMapping[values.portal]
     if (!portalInfo) {
@@ -91,10 +106,15 @@ export default function UnifiedLoginPage() {
         router.push("/dashboard")
       }
     } catch (error: any) {
+      const errorMessage = error.message || "Invalid credentials or wrong portal.";
+      const isUserNotFound = errorMessage.includes("Account not found");
+      
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message || "Invalid credentials or wrong portal.",
+        description: isUserNotFound 
+          ? "Account not found. Please register first." 
+          : errorMessage,
       })
     } finally {
       setIsPending(false)
@@ -246,7 +266,7 @@ export default function UnifiedLoginPage() {
                     )}
                   </AnimatePresence>
 
-                  <Button type="submit" className="w-full" disabled={isPending}>
+                  <Button type="submit" className="w-full" disabled={isPending || !isStoreReady}>
                     {isPending && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
@@ -254,6 +274,24 @@ export default function UnifiedLoginPage() {
                   </Button>
                 </form>
               </Form>
+              
+              <div className="mt-6 text-center">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      New to AutoTrack Pro?
+                    </span>
+                  </div>
+                </div>
+                <Link href="/register">
+                  <Button variant="outline" className="mt-4 w-full">
+                    Create an Account
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </motion.div>

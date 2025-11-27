@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { mockUsers } from '@/lib/data';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 
 interface LoginFormProps {
@@ -37,19 +38,35 @@ export default function LoginForm({ role, title, subRoleOptions }: LoginFormProp
   const [isPending, startTransition] = useTransition();
   const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter();
-  const { login, loginWithGoogle } = useAppStore();
+  const { login, loginWithGoogle, loginWithMicrosoft, hasFetchedFromFirestore, isSyncing } = useAppStore((state) => ({
+    login: state.login,
+    loginWithGoogle: state.loginWithGoogle,
+    loginWithMicrosoft: state.loginWithMicrosoft,
+    hasFetchedFromFirestore: state.hasFetchedFromFirestore,
+    isSyncing: state.isSyncing,
+  }));
   const { toast } = useToast();
+  const isStoreReady = hasFetchedFromFirestore && !isSyncing;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: mockUsers.find(u => u.role === role)?.email || '',
       password: 'password',
-      subrole: subRoleOptions ? subRoleOptions[0] : undefined,
+      subrole: subRoleOptions ? (subRoleOptions[0] as string) : undefined,
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (!isStoreReady) {
+      toast({
+        variant: 'destructive',
+        title: 'Sync in progress',
+        description: 'Please wait until data sync completes.',
+      });
+      return;
+    }
+
     startTransition(() => {
       try {
         const user = login(values.email, values.password, role, values.subrole as SubRole);
@@ -62,16 +79,30 @@ export default function LoginForm({ role, title, subRoleOptions }: LoginFormProp
             setTimeout(() => router.push(`/dashboard`), 1200);
         }
       } catch (error: any) {
+         const errorMessage = error.message || "Invalid credentials or wrong portal.";
+         const isUserNotFound = errorMessage.includes("Invalid credentials");
+         
          toast({
           variant: "destructive",
           title: "Login Failed",
-          description: error.message || "Invalid credentials or wrong portal.",
+          description: isUserNotFound 
+            ? "Account not found. Please register first." 
+            : errorMessage,
         });
       }
     });
   };
   
   const handleGoogleLogin = () => {
+    if (!isStoreReady) {
+      toast({
+        variant: 'destructive',
+        title: 'Sync in progress',
+        description: 'Please wait until data sync completes.',
+      });
+      return;
+    }
+
     startTransition(async () => {
        try {
         const user = await loginWithGoogle(role, form.getValues('subrole') as SubRole);
@@ -92,6 +123,37 @@ export default function LoginForm({ role, title, subRoleOptions }: LoginFormProp
        }
     })
   }
+
+  const handleMicrosoftLogin = () => {
+    if (!isStoreReady) {
+      toast({
+        variant: 'destructive',
+        title: 'Sync in progress',
+        description: 'Please wait until data sync completes.',
+      });
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const user = await loginWithMicrosoft(role, form.getValues('subrole') as SubRole);
+        if (user) {
+          setIsSuccess(true);
+          toast({
+            title: "Microsoft Login Successful",
+            description: `Welcome back, ${user.name}!`,
+          });
+          setTimeout(() => router.push(`/dashboard`), 1200);
+        }
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Microsoft Login Failed",
+          description: error.message || "Could not sign in with Microsoft.",
+        });
+      }
+    });
+  };
 
   const cardVariants = {
     initial: { opacity: 0, y: 50, scale: 0.95 },
@@ -162,7 +224,7 @@ export default function LoginForm({ role, title, subRoleOptions }: LoginFormProp
                   )}
                 />
               )}
-              <Button type="submit" className="w-full group" disabled={isPending || isSuccess}>
+              <Button type="submit" className="w-full group" disabled={isPending || isSuccess || !isStoreReady}>
                 {isPending && form.formState.isSubmitting ? (
                   <Loader2 className="animate-spin" />
                 ) : isSuccess ? (
@@ -179,7 +241,8 @@ export default function LoginForm({ role, title, subRoleOptions }: LoginFormProp
               <Separator />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">OR</span>
            </div>
-            <Button variant="outline" className="w-full group" onClick={handleGoogleLogin} disabled={isPending || isSuccess}>
+            <div className="flex flex-col gap-2">
+            <Button variant="outline" className="w-full group" onClick={handleGoogleLogin} disabled={isPending || isSuccess || !isStoreReady}>
                 {isPending && !form.formState.isSubmitting ? (
                     <Loader2 className="animate-spin" />
                 ) : (
@@ -188,6 +251,22 @@ export default function LoginForm({ role, title, subRoleOptions }: LoginFormProp
                     </>
                 )}
             </Button>
+            <Button variant="outline" className="w-full group" onClick={handleMicrosoftLogin} disabled={isPending || isSuccess || !isStoreReady}>
+                {isPending && !form.formState.isSubmitting ? (
+                    <Loader2 className="animate-spin" />
+                ) : (
+                    <>
+                     <span className="mr-2 text-lg">🪟</span> Sign in with Microsoft
+                    </>
+                )}
+            </Button>
+            </div>
+            <div className="mt-4 text-center text-sm">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="underline text-primary font-medium hover:text-primary/80">
+              Create Account
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </motion.div>
