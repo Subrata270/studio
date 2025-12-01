@@ -1,0 +1,432 @@
+[
+  {
+    "No": "1",
+    "Departments": "Pre-Sales",
+    "HOD": "Shiva Shanker Reddy Devasani",
+    "HOD Mails": "shanker@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "2",
+    "Departments": "Sales",
+    "HOD": "G Sumanth Reddy",
+    "HOD Mails": "sumanth@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "3",
+    "Departments": "Branding",
+    "HOD": "Nikita Aggarwal",
+    "HOD Mails": "nikita.aggarwal@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "4",
+    "Departments": "GenAI Social Media",
+    "HOD": "Rahul Yenninti",
+    "HOD Mails": "rahul.yenninti@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "5",
+    "Departments": "Placement - Corporate Relations",
+    "HOD": "Girish Akash",
+    "HOD Mails": "girish@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "6",
+    "Departments": "10xIIT",
+    "HOD": "Srikar",
+    "HOD Mails": "srikar@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "7",
+    "Departments": "AI&Beyond",
+    "HOD": "Srikar",
+    "HOD Mails": "srikar@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "8",
+    "Departments": "Student Success - Academy",
+    "HOD": "Avinash Dara",
+    "HOD Mails": "avinash@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "9",
+    "Departments": "PLG - Academy & PLG - NIAT",
+    "HOD": "Avinash Dara",
+    "HOD Mails": "avinash@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "10",
+    "Departments": "Gig Works",
+    "HOD": "Avinash Dara",
+    "HOD Mails": "avinash@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "11",
+    "Departments": "Talent Acquisition",
+    "HOD": "Hari Haran Gorijavola",
+    "HOD Mails": "hari@nxtwave.co.in",
+    "APA": "RAJAMONI.JYOTHI",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "12",
+    "Departments": "Marketing",
+    "HOD": "Shiva Shanker Reddy Devasani",
+    "HOD Mails": "shanker@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "13",
+    "Departments": "Student Success - Intensive",
+    "HOD": "Aniketh Reddy Mustoor",
+    "HOD Mails": "aniketh@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "14",
+    "Departments": "Placement - Content",
+    "HOD": "Sai Teja Manchukanti",
+    "HOD Mails": "saiteja@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "15",
+    "Departments": "University Partnership",
+    "HOD": "Karthik Reddy V",
+    "HOD Mails": "karthik@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "16",
+    "Departments": "PRE",
+    "HOD": "Anil Kumar Ganguri",
+    "HOD Mails": "anil@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "17",
+    "Departments": "Abroad",
+    "HOD": "Anil Kumar Ganguri",
+    "HOD Mails": "anil@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "18",
+    "Departments": "Management",
+    "HOD": "Rahul Attuluri",
+    "HOD Mails": "rahul@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "19",
+    "Departments": "NIAT - Academics",
+    "HOD": "Vamsi Tallam",
+    "HOD Mails": "vamsitallam@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "20",
+    "Departments": "Technology",
+    "HOD": "Revanth Gopi Chowdary Konakanchi",
+    "HOD Mails": "revanth@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "21",
+    "Departments": "NxtGen LP",
+    "HOD": "Revanth Gopi Chowdary Konakanchi",
+    "HOD Mails": "revanth@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "22",
+    "Departments": "Student Success - NIAT",
+    "HOD": "Aniketh Reddy Mustoor",
+    "HOD Mails": "aniketh@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "23",
+    "Departments": "NIAT - Program Ops",
+    "HOD": "Pavan Reddy Dharma",
+    "HOD Mails": "pavan.dharma@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "24",
+    "Departments": "Content - MERN",
+    "HOD": "Pavan Gangireddy",
+    "HOD Mails": "pavangangireddy@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "25",
+    "Departments": "Content - DS&Algo",
+    "HOD": "Sashank Reddy Gujjula",
+    "HOD Mails": "sashank@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Sashank Reddy Gujjula",
+    "Founders Mail": "sashank@nxtwave.co.in"
+  },
+  {
+    "No": "26",
+    "Departments": "Content - DS&ML",
+    "HOD": "Akhil Jogiparthi",
+    "HOD Mails": "akhil@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "27",
+    "Departments": "Human Resource",
+    "HOD": "Radha Alekhya Kommanaboina",
+    "HOD Mails": "alekhya.k@nxtwave.co.in",
+    "APA": "RAJAMONI.JYOTHI",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "28",
+    "Departments": "HR - Admin/Facilities",
+    "HOD": "Bala Bhaskar Reddy Dodda",
+    "HOD Mails": "balabhaskar@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "29",
+    "Departments": "HR - Learning & Development",
+    "HOD": "Munagala Varun Reddy",
+    "HOD Mails": "varun@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "30",
+    "Departments": "Video House",
+    "HOD": "Joiet Joseph",
+    "HOD Mails": "joseph.joiet@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "31",
+    "Departments": "Content Marketing",
+    "HOD": "Sai Sampreeth Sambaraju",
+    "HOD Mails": "sampreeth@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "32",
+    "Departments": "Graphic Design",
+    "HOD": "Shivaji Babu Velpula",
+    "HOD Mails": "shivajibabu.velpula@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "33",
+    "Departments": "Query Resolution",
+    "HOD": "Vamsi Tallam",
+    "HOD Mails": "vamsitallam@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "34",
+    "Departments": "Placement Success Manager",
+    "HOD": "Vamsi Tallam",
+    "HOD Mails": "vamsitallam@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "35",
+    "Departments": "Business Ops",
+    "HOD": "Shivam Singh",
+    "HOD Mails": "shivam.singh@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "36",
+    "Departments": "Product Design",
+    "HOD": "Aman Maheshwari",
+    "HOD Mails": "aman.maheshwari@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "37",
+    "Departments": "Founders Office",
+    "HOD": "Rahul Attuluri",
+    "HOD Mails": "rahul@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "38",
+    "Departments": "NIFA",
+    "HOD": "Divyansh Mathur",
+    "HOD Mails": "divyansh.mathur@nxtwave.co.in",
+    "APA": "RAJAMONI.JYOTHI",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "39",
+    "Departments": "Finance",
+    "HOD": "Akhilesh Jhawar",
+    "HOD Mails": "akhilesh.jhawar@nxtwave.in",
+    "APA": "Suresh",
+    "APA mail": "satti.sureshreddy@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "40",
+    "Departments": "NIAT Hostels & Transportation",
+    "HOD": "Anil Kumar Ganguri",
+    "HOD Mails": "anil@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Anupam Pedarla",
+    "Founders Mail": "anupam@nxtwave.co.in"
+  },
+  {
+    "No": "41",
+    "Departments": "NIAT Masterclass",
+    "HOD": "Akhil Jogiparthi",
+    "HOD Mails": "akhil@nxtwave.co.in",
+    "APA": "CHENNAKESAVA.KONDA",
+    "APA mail": "chennakesava.konda@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "42",
+    "Departments": "NIAT Robotics",
+    "HOD": "Sai Teja Manchukanti",
+    "HOD Mails": "saiteja@nxtwave.co.in",
+    "APA": "LIMBAYYAGARI.NAGAMANI",
+    "APA mail": "limbayyagari.nagamani@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  },
+  {
+    "No": "43",
+    "Departments": "Product Management",
+    "HOD": "Avinash Dara",
+    "HOD Mails": "avinash@nxtwave.co.in",
+    "APA": "SRIKANTH.JAMMULA",
+    "APA mail": "srikanth.jammula@nxtwave.co.in",
+    "Founders": "Rahul Attuluri",
+    "Founders Mail": "rahul@nxtwave.co.in"
+  }
+]
