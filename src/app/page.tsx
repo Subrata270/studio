@@ -32,6 +32,7 @@ import { useAppStore } from "@/store/app-store"
 import { Role, SubRole } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { Separator } from "@/components/ui/separator"
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -41,16 +42,18 @@ const formSchema = z.object({
 })
 
 const portalMapping: { [key: string]: { role: Role; path: string } } = {
-  "Department POC Portal": { role: "employee", path: "/login/employee" },
+  "Department POC Portal": { role: "poc", path: "/login/poc" },
   "HOD Portal": { role: "hod", path: "/login/hod" },
   "Finance Portal": { role: "finance", path: "/login/finance" },
 }
 
 export default function UnifiedLoginPage() {
   const [isPending, setIsPending] = useState(false)
+  const [isMicrosoftPending, setIsMicrosoftPending] = useState(false)
   const router = useRouter()
-  const { login, hasFetchedFromFirestore, isSyncing } = useAppStore((state) => ({
+  const { login, autoLoginWithMicrosoft, hasFetchedFromFirestore, isSyncing } = useAppStore((state) => ({
     login: state.login,
+    autoLoginWithMicrosoft: state.autoLoginWithMicrosoft,
     hasFetchedFromFirestore: state.hasFetchedFromFirestore,
     isSyncing: state.isSyncing,
   }))
@@ -118,6 +121,28 @@ export default function UnifiedLoginPage() {
       })
     } finally {
       setIsPending(false)
+    }
+  }
+
+  const handleMicrosoftSignin = async () => {
+    setIsMicrosoftPending(true)
+    try {
+      const user = await autoLoginWithMicrosoft()
+      if (user) {
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${user.name}! Redirecting to dashboard...`,
+        })
+        router.push("/dashboard")
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message || "Failed to sign in with Microsoft.",
+      })
+    } finally {
+      setIsMicrosoftPending(false)
     }
   }
 
@@ -274,6 +299,31 @@ export default function UnifiedLoginPage() {
                   </Button>
                 </form>
               </Form>
+
+              <div className="mt-4">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      Or
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-4 w-full"
+                  onClick={handleMicrosoftSignin}
+                  disabled={isMicrosoftPending || !isStoreReady}
+                >
+                  {isMicrosoftPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  🪟 Sign in with Microsoft
+                </Button>
+              </div>
               
               <div className="mt-6 text-center">
                 <div className="relative">

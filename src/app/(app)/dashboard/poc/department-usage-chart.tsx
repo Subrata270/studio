@@ -3,14 +3,14 @@
 
 import { motion, useInView, useAnimation } from 'framer-motion';
 import { useEffect, useRef } from 'react';
-import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 interface ChartDataItem {
     name: string;
     count: number;
 }
 
-interface AnimatedCircularChartProps {
+interface DepartmentUsageChartProps {
     data: ChartDataItem[];
     size?: number;
     strokeWidth?: number;
@@ -24,10 +24,11 @@ const colors = [
     'hsl(var(--chart-5))',
 ];
 
-export default function AnimatedCircularChart({ data, size = 250, strokeWidth = 25 }: AnimatedCircularChartProps) {
+export default function DepartmentUsageChart({ data, size = 250, strokeWidth = 25 }: DepartmentUsageChartProps) {
     const ref = useRef(null);
     const isInView = useInView(ref, { once: true });
     const controls = useAnimation();
+    const router = useRouter();
     
     const totalCount = data.reduce((acc, item) => acc + item.count, 0);
     const radius = (size - strokeWidth) / 2;
@@ -40,9 +41,18 @@ export default function AnimatedCircularChart({ data, size = 250, strokeWidth = 
         }
     }, [isInView, controls]);
 
+    const handleClick = () => {
+        router.push('/dashboard/poc/history');
+    };
+
     return (
         <div className="flex flex-col md:flex-row items-center gap-8">
-            <div ref={ref} className="relative cursor-pointer group" style={{ width: size, height: size }}>
+            <div 
+                ref={ref} 
+                className="relative cursor-pointer group" 
+                style={{ width: size, height: size }}
+                onClick={handleClick}
+            >
                 <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
                     <circle
                         cx={size / 2}
@@ -91,12 +101,12 @@ export default function AnimatedCircularChart({ data, size = 250, strokeWidth = 
                 </svg>
                  <div className="absolute inset-0 flex items-center justify-center flex-col text-center pointer-events-none">
                     <p className="text-3xl font-bold">{totalCount}</p>
-                    <p className="text-sm text-muted-foreground">Total</p>
+                    <p className="text-sm text-muted-foreground">Total Tools</p>
                 </div>
             </div>
             <div className="flex flex-col gap-2">
                 {data.map((item, index) => {
-                    const percentage = Math.round((item.count / totalCount) * 100);
+                    const percentage = totalCount > 0 ? Math.round((item.count / totalCount) * 100) : 0;
                      const color = colors[index % colors.length];
                     return (
                         <div key={item.name} className="flex items-center gap-3 text-sm">
@@ -110,4 +120,3 @@ export default function AnimatedCircularChart({ data, size = 250, strokeWidth = 
         </div>
     );
 }
-

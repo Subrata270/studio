@@ -1,0 +1,626 @@
+/**
+ * Unit Tests for LocationDropdown Component
+ * 
+ * Test coverage:
+ * - Rendering and filtering
+ * - Keyboard navigation
+ * - Selection (single and multi)
+ * - Select All functionality
+ * - Other option behavior
+ * - Accessibility (ARIA attributes)
+ */
+
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom';
+import { LocationDropdown, LocationOption } from './LocationDropdown';
+
+const mockOptions: LocationOption[] = [
+  { label: 'Office - Hyd Brigade', value: 'office-hyd-brigade' },
+  { label: 'Office - Hyd KKH', value: 'office-hyd-kkh' },
+  { label: 'NIAT - Aurora', value: 'niat-aurora' },
+  { label: 'NIAT - CDU', value: 'niat-cdu' },
+  { label: 'Other', value: 'other' },
+];
+
+describe('LocationDropdown', () => {
+  describe('Rendering', () => {
+    it('should render with placeholder', () => {
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+          placeholder="Select location"
+        />
+      );
+      expect(screen.getByText('Select location')).toBeInTheDocument();
+    });
+
+    it('should render selected value', () => {
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value="office-hyd-brigade"
+          onChange={jest.fn()}
+        />
+      );
+      expect(screen.getByText('Office - Hyd Brigade')).toBeInTheDocument();
+    });
+
+    it('should render with disabled state', () => {
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+          disabled
+        />
+      );
+      const button = screen.getByRole('button');
+      expect(button).toBeDisabled();
+    });
+  });
+
+  describe('Filtering', () => {
+    it('should filter options based on search text', async () => {
+      const user = userEvent.setup();
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      // Open dropdown
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      // Type in search
+      const searchInput = screen.getByPlaceholderText('Search locations...');
+      await user.type(searchInput, 'NIAT');
+
+      // Should show only NIAT options
+      await waitFor(() => {
+        expect(screen.getByText('NIAT - Aurora')).toBeInTheDocument();
+        expect(screen.getByText('NIAT - CDU')).toBeInTheDocument();
+        expect(screen.queryByText('Office - Hyd Brigade')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should show "No matching location" when no results', async () => {
+      const user = userEvent.setup();
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const searchInput = screen.getByPlaceholderText('Search locations...');
+      await user.type(searchInput, 'nonexistent');
+
+      await waitFor(() => {
+        expect(screen.getByText('No matching location')).toBeInTheDocument();
+      });
+    });
+
+    it('should perform case-insensitive search', async () => {
+      const user = userEvent.setup();
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const searchInput = screen.getByPlaceholderText('Search locations...');
+      await user.type(searchInput, 'office');
+
+      await waitFor(() => {
+        expect(screen.getByText('Office - Hyd Brigade')).toBeInTheDocument();
+        expect(screen.getByText('Office - Hyd KKH')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Keyboard Navigation', () => {
+    it('should open dropdown with Enter key', async () => {
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      fireEvent.keyDown(button, { key: 'Enter' });
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Search locations...')).toBeInTheDocument();
+      });
+    });
+
+    it('should navigate with ArrowDown and ArrowUp', async () => {
+      const user = userEvent.setup();
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const searchInput = screen.getByPlaceholderText('Search locations...');
+      
+      // Arrow down should highlight first option
+      fireEvent.keyDown(searchInput, { key: 'ArrowDown' });
+      
+      // Arrow up should move back
+      fireEvent.keyDown(searchInput, { key: 'ArrowUp' });
+      
+      // Test passes if no errors thrown
+      expect(searchInput).toHaveFocus();
+    });
+
+    it('should close dropdown with Escape key', async () => {
+      const user = userEvent.setup();
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const searchInput = screen.getByPlaceholderText('Search locations...');
+      fireEvent.keyDown(searchInput, { key: 'Escape' });
+
+      await waitFor(() => {
+        expect(screen.queryByPlaceholderText('Search locations...')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should select option with Enter key', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={onChange}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const searchInput = screen.getByPlaceholderText('Search locations...');
+      
+      // Navigate and select
+      fireEvent.keyDown(searchInput, { key: 'ArrowDown' });
+      fireEvent.keyDown(searchInput, { key: 'Enter' });
+
+      expect(onChange).toHaveBeenCalled();
+    });
+  });
+
+  describe('Single Select Mode', () => {
+    it('should select option and close dropdown on click', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={onChange}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const option = screen.getByText('Office - Hyd Brigade');
+      await user.click(option);
+
+      expect(onChange).toHaveBeenCalledWith('office-hyd-brigade', undefined);
+      
+      // Dropdown should close
+      await waitFor(() => {
+        expect(screen.queryByPlaceholderText('Search locations...')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should show clear button when allowClear is true', () => {
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value="office-hyd-brigade"
+          onChange={jest.fn()}
+          allowClear
+        />
+      );
+
+      const clearButton = screen.getByLabelText('Clear selection');
+      expect(clearButton).toBeInTheDocument();
+    });
+
+    it('should clear selection when clear button clicked', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value="office-hyd-brigade"
+          onChange={onChange}
+          allowClear
+        />
+      );
+
+      const clearButton = screen.getByLabelText('Clear selection');
+      await user.click(clearButton);
+
+      expect(onChange).toHaveBeenCalledWith('');
+    });
+  });
+
+  describe('Multi-Select Mode', () => {
+    it('should allow multiple selections', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value={[]}
+          onChange={onChange}
+          multiple
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      // Select first option
+      const option1 = screen.getByText('Office - Hyd Brigade');
+      await user.click(option1);
+
+      expect(onChange).toHaveBeenCalledWith(['office-hyd-brigade'], undefined);
+
+      // Dropdown should stay open
+      expect(screen.getByPlaceholderText('Search locations...')).toBeInTheDocument();
+    });
+
+    it('should show selected count in trigger', () => {
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value={['office-hyd-brigade', 'niat-aurora']}
+          onChange={jest.fn()}
+          multiple
+        />
+      );
+
+      expect(screen.getByText('2 selected')).toBeInTheDocument();
+    });
+
+    it('should display chips for selected values', () => {
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value={['office-hyd-brigade', 'niat-aurora']}
+          onChange={jest.fn()}
+          multiple
+        />
+      );
+
+      expect(screen.getByText('Office - Hyd Brigade')).toBeInTheDocument();
+      expect(screen.getByText('NIAT - Aurora')).toBeInTheDocument();
+    });
+
+    it('should remove chip when X button clicked', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value={['office-hyd-brigade', 'niat-aurora']}
+          onChange={onChange}
+          multiple
+        />
+      );
+
+      const removeButton = screen.getByLabelText('Remove Office - Hyd Brigade');
+      await user.click(removeButton);
+
+      expect(onChange).toHaveBeenCalledWith(['niat-aurora']);
+    });
+  });
+
+  describe('Select All Functionality', () => {
+    it('should show "Select All" option in multi-select mode', async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value={[]}
+          onChange={jest.fn()}
+          multiple
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      expect(screen.getByText('Select All')).toBeInTheDocument();
+    });
+
+    it('should select all options when "Select All" clicked', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value={[]}
+          onChange={onChange}
+          multiple
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const selectAll = screen.getByText('Select All');
+      await user.click(selectAll);
+
+      const expectedValues = mockOptions.map(opt => opt.value);
+      expect(onChange).toHaveBeenCalledWith(expectedValues, '');
+    });
+
+    it('should deselect all when "Select All" clicked with all selected', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      const allValues = mockOptions.map(opt => opt.value);
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value={allValues}
+          onChange={onChange}
+          multiple
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const selectAll = screen.getByText('Select All');
+      await user.click(selectAll);
+
+      expect(onChange).toHaveBeenCalledWith([], '');
+    });
+  });
+
+  describe('Other Option Behavior', () => {
+    it('should show text input when "Other" is selected', async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const otherOption = screen.getByText('Other');
+      await user.click(otherOption);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Type location')).toBeInTheDocument();
+      });
+    });
+
+    it('should pass other text in onChange callback', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value="other"
+          onChange={onChange}
+        />
+      );
+
+      const otherInput = screen.getByPlaceholderText('Type location');
+      await user.type(otherInput, 'Custom Location');
+
+      expect(onChange).toHaveBeenCalledWith(['other'], 'Custom Location');
+    });
+
+    it('should clear other text when "Other" is deselected in multi-select', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value={['other']}
+          onChange={onChange}
+          multiple
+        />
+      );
+
+      const removeButton = screen.getByLabelText('Remove Other');
+      await user.click(removeButton);
+
+      expect(onChange).toHaveBeenCalledWith([]);
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have proper ARIA attributes', () => {
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      expect(button).toHaveAttribute('aria-haspopup', 'listbox');
+      expect(button).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('should update aria-expanded when dropdown opens', async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      expect(button).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('should have listbox role for options list', async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const listbox = screen.getByRole('listbox', { name: /location options/i });
+      expect(listbox).toBeInTheDocument();
+    });
+
+    it('should announce filtered results for screen readers', async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const searchInput = screen.getByPlaceholderText('Search locations...');
+      await user.type(searchInput, 'NIAT');
+
+      await waitFor(() => {
+        const status = screen.getByRole('status');
+        expect(status).toHaveTextContent(/2 locations available/i);
+      });
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle empty options array', () => {
+      render(
+        <LocationDropdown
+          options={[]}
+          value=""
+          onChange={jest.fn()}
+        />
+      );
+
+      expect(screen.getByRole('button')).toBeInTheDocument();
+    });
+
+    it('should handle allowFreeText with Enter key', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+      
+      render(
+        <LocationDropdown
+          options={mockOptions}
+          value=""
+          onChange={jest.fn()}
+          allowFreeText
+        />
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      const searchInput = screen.getByPlaceholderText('Search locations...');
+      await user.type(searchInput, 'Custom Text');
+      fireEvent.keyDown(searchInput, { key: 'Enter' });
+
+      // Should allow custom value
+      expect(screen.getByRole('button')).toBeInTheDocument();
+    });
+
+    it('should close dropdown when clicking outside', async () => {
+      const user = userEvent.setup();
+      
+      render(
+        <div>
+          <LocationDropdown
+            options={mockOptions}
+            value=""
+            onChange={jest.fn()}
+          />
+          <div data-testid="outside">Outside element</div>
+        </div>
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      expect(screen.getByPlaceholderText('Search locations...')).toBeInTheDocument();
+
+      const outside = screen.getByTestId('outside');
+      await user.click(outside);
+
+      await waitFor(() => {
+        expect(screen.queryByPlaceholderText('Search locations...')).not.toBeInTheDocument();
+      });
+    });
+  });
+});

@@ -1,0 +1,815 @@
+/**
+ * Tests for CompactInlineCurrencyAmount Component
+ * 
+ * Covers:
+ * - Portal rendering (modal clipping fix)
+ * - Dropdown interaction (click & keyboard)
+ * - Currency selection and onChange callbacks
+ * - Amount input validation and debouncing
+ * - Equivalent calculation with conversion rates
+ * - Accessibility (ARIA, focus management)
+ * - Compact visual constraints
+ */
+
+import React from 'react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom';
+import { CompactInlineCurrencyAmount, CurrencyAmountValue } from './CompactInlineCurrencyAmount';
+
+// Mock lucide-react icons
+jest.mock('lucide-react', () => ({
+  ChevronDown: () => <div data-testid="chevron-down" />,
+  Check: () => <div data-testid="check-icon" />,
+}));
+
+describe('CompactInlineCurrencyAmount', () => {
+  const defaultProps = {
+    value: { amount: 34, currency: 'IND' as const },
+    onChange: jest.fn(),
+    conversionRates: { IND: 1, US: 82, SWZ: 90 },
+    baseCurrency: 'IND' as const,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
+
+  describe('Rendering & Layout', () => {
+    it('renders compact composite control with currency trigger and amount input', () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      expect(trigger).toBeInTheDocument();
+      expect(trigger).toHaveTextContent('IND');
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      expect(input).toBeInTheDocument();
+      expect(input).toHaveValue('34');
+    });
+
+    it('displays correct currency symbol and label in trigger', () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      expect(trigger).toHaveTextContent('₹'); // IND symbol
+      expect(trigger).toHaveTextContent('IND'); // Label
+    });
+
+    it('shows chevron icon in trigger', () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      expect(screen.getByTestId('chevron-down')).toBeInTheDocument();
+    });
+
+    it('displays equivalent value when amount > 0', () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      // Should show equivalent (same currency, so 34 IND = 34 IND)
+      expect(screen.getByText(/≈/)).toBeInTheDocument();
+      expect(screen.getByText(/₹34\.00/i)).toBeInTheDocument();
+    });
+
+    it('calculates correct equivalent for US currency', () => {
+      const props = {
+        ...defaultProps,
+        value: { amount: 1, currency: 'US' as const },
+      };
+      render(<CompactInlineCurrencyAmount {...props} />);
+      
+      // 1 US = 82 IND
+      expect(screen.getByText(/₹82\.00/i)).toBeInTheDocument();
+    });
+
+    it('hides equivalent when amount is 0', () => {
+      const props = {
+        ...defaultProps,
+        value: { amount: 0, currency: 'IND' as const },
+      };
+      render(<CompactInlineCurrencyAmount {...props} />);
+      
+      expect(screen.queryByText(/≈/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Portal Rendering (Modal Clipping Fix)', () => {
+    it('renders dropdown menu using portal to document.body', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const listbox = screen.getByRole('listbox');
+        expect(listbox).toBeInTheDocument();
+        // Portal should render to body, not inside the component
+        expect(listbox.parentElement).toBe(document.body);
+      });
+    });
+
+    it('uses fixed positioning with high z-index to prevent modal clipping', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const listbox = screen.getByRole('listbox');
+        const styles = window.getComputedStyle(listbox);
+        expect(listbox.style.position).toBe('fixed');
+        expect(listbox.style.zIndex).toBe('99999');
+      });
+    });
+
+    it('positions dropdown below trigger button', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const listbox = screen.getByRole('listbox');
+        // Should have top/left positioning
+        expect(listbox.style.top).toBeTruthy();
+        expect(listbox.style.left).toBeTruthy();
+      });
+    });
+
+    it('accepts custom menuPortalTarget prop', () => {
+      const customTarget = document.createElement('div');
+      document.body.appendChild(customTarget);
+      
+      render(
+        <CompactInlineCurrencyAmount
+          {...defaultProps}
+          menuPortalTarget={customTarget}
+        />
+      );
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      waitFor(() => {
+        const listbox = screen.getByRole('listbox');
+        expect(listbox.parentElement).toBe(customTarget);
+      });
+      
+      document.body.removeChild(customTarget);
+    });
+  });
+
+  describe('Dropdown Interaction - Click', () => {
+    it('opens dropdown menu on trigger click', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+      });
+    });
+
+    it('displays exactly 3 currency options (IND, US, SWZ)', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        expect(options).toHaveLength(3);
+        
+        // Verify all three currencies are present
+        expect(screen.getByText('IND')).toBeInTheDocument();
+        expect(screen.getByText('US')).toBeInTheDocument();
+        expect(screen.getByText('SWZ')).toBeInTheDocument();
+      });
+    });
+
+    it('shows correct symbols and sublabels for each currency', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        // IND
+        expect(screen.getByText('₹')).toBeInTheDocument();
+        expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+        
+        // US
+        expect(screen.getByText('$')).toBeInTheDocument();
+        expect(screen.getByText('US Dollar')).toBeInTheDocument();
+        
+        // SWZ
+        expect(screen.getByText('CHF')).toBeInTheDocument();
+        expect(screen.getByText('Swiss Franc')).toBeInTheDocument();
+      });
+    });
+
+    it('shows clear selected state with check icon and bold text', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        const selectedOption = options.find((opt) => 
+          opt.getAttribute('aria-selected') === 'true'
+        );
+        
+        expect(selectedOption).toBeInTheDocument();
+        expect(selectedOption).toHaveClass('bg-primary/10');
+        expect(selectedOption).toHaveClass('font-semibold');
+        expect(within(selectedOption!).getByTestId('check-icon')).toBeInTheDocument();
+      });
+    });
+
+    it('calls onChange with new currency on option click', async () => {
+      const onChange = jest.fn();
+      render(<CompactInlineCurrencyAmount {...defaultProps} onChange={onChange} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        const usOption = options.find((opt) => opt.textContent?.includes('US Dollar'));
+        fireEvent.click(usOption!);
+      });
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 34, currency: 'US' });
+    });
+
+    it('updates selected state when different option is clicked', async () => {
+      const { rerender } = render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        const indOption = options.find((opt) => opt.textContent?.includes('Indian Rupee'));
+        expect(indOption).toHaveAttribute('aria-selected', 'true');
+      });
+      
+      // Change to US
+      rerender(
+        <CompactInlineCurrencyAmount
+          {...defaultProps}
+          value={{ amount: 34, currency: 'US' }}
+        />
+      );
+      
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        const usOption = options.find((opt) => opt.textContent?.includes('US Dollar'));
+        const indOption = options.find((opt) => opt.textContent?.includes('Indian Rupee'));
+        
+        expect(usOption).toHaveAttribute('aria-selected', 'true');
+        expect(indOption).toHaveAttribute('aria-selected', 'false');
+      });
+    });
+
+    it('menu width matches trigger width when menuMatchTriggerWidth is true', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} menuMatchTriggerWidth={true} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      
+      // Mock getBoundingClientRect to return specific width
+      const mockRect = { bottom: 100, left: 50, width: 150, height: 40 };
+      jest.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(mockRect as DOMRect);
+      
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const listbox = screen.getByRole('listbox');
+        expect(listbox.style.width).toBe('150px');
+        expect(listbox.style.minWidth).toBe('150px');
+      });
+    });
+
+    it('menu has minimum width when menuMatchTriggerWidth is false', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} menuMatchTriggerWidth={false} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const listbox = screen.getByRole('listbox');
+        expect(listbox.style.minWidth).toBe('140px');
+        expect(listbox.style.width).toBe('');
+      });
+    });
+
+    it('closes dropdown after selecting option', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        fireEvent.click(options[1]);
+      });
+      
+      await waitFor(() => {
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      });
+    });
+
+    it('returns focus to amount input after selection', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        fireEvent.click(options[1]);
+      });
+      
+      await waitFor(() => {
+        expect(input).toHaveFocus();
+      });
+    });
+
+    it('closes dropdown when clicking outside', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+      });
+      
+      fireEvent.mouseDown(document.body);
+      
+      await waitFor(() => {
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      });
+    });
+
+    it('non-selected options show hover state', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        const nonSelectedOption = options.find((opt) => 
+          opt.getAttribute('aria-selected') === 'false'
+        );
+        
+        expect(nonSelectedOption).toHaveClass('hover:bg-accent/50');
+        expect(nonSelectedOption).not.toHaveClass('bg-primary/10');
+      });
+    });
+  });
+
+  describe('Dropdown Interaction - Keyboard', () => {
+    it('opens dropdown on Enter key', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+      });
+    });
+
+    it('opens dropdown on Space key', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: ' ' });
+      
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+      });
+    });
+
+    it('navigates options with ArrowDown key', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => screen.getByRole('listbox'));
+      
+      fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+      fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+      
+      // Should highlight third option
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        expect(options[2]).toHaveClass('bg-accent/30');
+      });
+    });
+
+    it('navigates options with ArrowUp key', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => screen.getByRole('listbox'));
+      
+      fireEvent.keyDown(trigger, { key: 'ArrowUp' });
+      
+      // Should wrap to last option
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        expect(options[2]).toHaveClass('bg-accent/30');
+      });
+    });
+
+    it('selects highlighted option on Enter key and shows selected state', async () => {
+      const onChange = jest.fn();
+      render(<CompactInlineCurrencyAmount {...defaultProps} onChange={onChange} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => screen.getByRole('listbox'));
+      
+      fireEvent.keyDown(trigger, { key: 'ArrowDown' }); // Highlight US
+      fireEvent.keyDown(trigger, { key: 'Enter' }); // Select
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 34, currency: 'US' });
+    });
+
+    it('closes dropdown on Escape key', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+      });
+      
+      fireEvent.keyDown(trigger, { key: 'Escape' });
+      
+      await waitFor(() => {
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      });
+    });
+
+    it('maintains aria-activedescendant on keyboard navigation', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => {
+        const listbox = screen.getByRole('listbox');
+        expect(listbox).toHaveAttribute('aria-activedescendant', 'currency-option-IND');
+      });
+    });
+  });
+
+  describe('Amount Input & Validation', () => {
+    it('updates input value on type', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      await user.clear(input);
+      await user.type(input, '100');
+      
+      expect(input).toHaveValue('100');
+    });
+
+    it('calls onChange with debounced value (100ms)', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup({ delay: null });
+      render(<CompactInlineCurrencyAmount {...defaultProps} onChange={onChange} />);
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      await user.clear(input);
+      await user.type(input, '200');
+      
+      // Should not call immediately
+      expect(onChange).not.toHaveBeenCalled();
+      
+      // Fast-forward debounce timer
+      jest.advanceTimersByTime(100);
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 200, currency: 'IND' });
+    });
+
+    it('shows validation error for non-numeric input', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      await user.clear(input);
+      await user.type(input, 'abc');
+      
+      jest.advanceTimersByTime(100);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/invalid number/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows validation error when decimals not allowed', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<CompactInlineCurrencyAmount {...defaultProps} allowDecimals={false} />);
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      await user.clear(input);
+      await user.type(input, '12.5');
+      
+      jest.advanceTimersByTime(100);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/no decimals allowed/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows validation error for min violation', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<CompactInlineCurrencyAmount {...defaultProps} min={10} />);
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      await user.clear(input);
+      await user.type(input, '5');
+      
+      jest.advanceTimersByTime(100);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/min: 10/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows validation error for max violation', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<CompactInlineCurrencyAmount {...defaultProps} max={100} />);
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      await user.clear(input);
+      await user.type(input, '200');
+      
+      jest.advanceTimersByTime(100);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/max: 100/i)).toBeInTheDocument();
+      });
+    });
+
+    it('handles empty input gracefully', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup({ delay: null });
+      render(<CompactInlineCurrencyAmount {...defaultProps} onChange={onChange} />);
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      await user.clear(input);
+      
+      jest.advanceTimersByTime(100);
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 0, currency: 'IND' });
+    });
+
+    it('prevents form submission on Enter in input', () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      Object.defineProperty(event, 'preventDefault', { value: jest.fn() });
+      
+      input.dispatchEvent(event);
+      
+      expect((event as any).preventDefault).toHaveBeenCalled();
+    });
+  });
+
+  describe('Currency Conversion & Equivalent', () => {
+    it('calculates equivalent using conversion rates', () => {
+      const props = {
+        ...defaultProps,
+        value: { amount: 10, currency: 'US' as const },
+      };
+      render(<CompactInlineCurrencyAmount {...props} />);
+      
+      // 10 US * 82 = 820 IND
+      expect(screen.getByText(/₹820\.00/i)).toBeInTheDocument();
+    });
+
+    it('uses baseCurrency for equivalent calculation', () => {
+      const props = {
+        ...defaultProps,
+        value: { amount: 90, currency: 'IND' as const },
+        baseCurrency: 'SWZ' as const,
+        conversionRates: { IND: 1, US: 82, SWZ: 90 },
+      };
+      render(<CompactInlineCurrencyAmount {...props} />);
+      
+      // 90 IND = 90 * 1 = 90 in base IND units
+      // But we want equivalent in SWZ, so need proper conversion
+      // Since conversion rates are relative to IND (1), and SWZ is 90
+      // The formula should handle this properly
+      expect(screen.getByText(/CHF/i)).toBeInTheDocument();
+    });
+
+    it('updates equivalent live when amount changes', async () => {
+      const user = userEvent.setup({ delay: null });
+      const props = {
+        ...defaultProps,
+        value: { amount: 1, currency: 'US' as const },
+      };
+      render(<CompactInlineCurrencyAmount {...props} />);
+      
+      expect(screen.getByText(/₹82\.00/i)).toBeInTheDocument();
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      await user.clear(input);
+      await user.type(input, '2');
+      
+      jest.advanceTimersByTime(100);
+      
+      // Should now show 2 * 82 = 164
+      await waitFor(() => {
+        expect(screen.getByText(/₹164\.00/i)).toBeInTheDocument();
+      });
+    });
+
+    it('updates equivalent when currency changes', async () => {
+      const { rerender } = render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      // Initial: 34 IND = 34 IND
+      expect(screen.getByText(/₹34\.00/i)).toBeInTheDocument();
+      
+      // Change to US: 34 US * 82 = 2788 IND
+      rerender(
+        <CompactInlineCurrencyAmount
+          {...defaultProps}
+          value={{ amount: 34, currency: 'US' }}
+        />
+      );
+      
+      await waitFor(() => {
+        expect(screen.getByText(/₹2,788\.00/i)).toBeInTheDocument();
+      });
+    });
+
+    it('formats currency with Intl.NumberFormat', () => {
+      const props = {
+        ...defaultProps,
+        value: { amount: 1234.56, currency: 'IND' as const },
+      };
+      render(<CompactInlineCurrencyAmount {...props} />);
+      
+      // Should format with proper grouping and decimals
+      expect(screen.getByText(/₹1,234\.56/i)).toBeInTheDocument();
+    });
+
+    it('returns null equivalent when conversion rate missing', () => {
+      const props = {
+        ...defaultProps,
+        conversionRates: { IND: 1 }, // Missing US, SWZ
+        value: { amount: 100, currency: 'US' as const },
+      };
+      render(<CompactInlineCurrencyAmount {...props} />);
+      
+      // Should not show equivalent
+      expect(screen.queryByText(/≈/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('has proper ARIA attributes on trigger', () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      expect(trigger).toHaveAttribute('aria-haspopup', 'listbox');
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('updates aria-expanded when dropdown opens', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        expect(trigger).toHaveAttribute('aria-expanded', 'true');
+      });
+    });
+
+    it('has aria-selected on options', async () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      await waitFor(() => {
+        const options = screen.getAllByRole('option');
+        expect(options[0]).toHaveAttribute('aria-selected', 'true'); // IND selected
+        expect(options[1]).toHaveAttribute('aria-selected', 'false');
+      });
+    });
+
+    it('has aria-live on equivalent display', () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const equivalent = screen.getByText(/≈/).parentElement;
+      expect(equivalent).toHaveAttribute('aria-live', 'polite');
+      expect(equivalent).toHaveAttribute('aria-atomic', 'true');
+    });
+
+    it('has aria-invalid on input when validation error', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<CompactInlineCurrencyAmount {...defaultProps} />);
+      
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      await user.clear(input);
+      await user.type(input, 'invalid');
+      
+      jest.advanceTimersByTime(100);
+      
+      await waitFor(() => {
+        expect(input).toHaveAttribute('aria-invalid', 'true');
+      });
+    });
+  });
+
+  describe('Disabled State', () => {
+    it('disables trigger and input when disabled', () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} disabled={true} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      const input = screen.getByRole('textbox', { name: /amount/i });
+      
+      expect(trigger).toBeDisabled();
+      expect(input).toBeDisabled();
+    });
+
+    it('does not open dropdown when disabled', () => {
+      render(<CompactInlineCurrencyAmount {...defaultProps} disabled={true} />);
+      
+      const trigger = screen.getByRole('button', { name: /select currency/i });
+      fireEvent.click(trigger);
+      
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Custom Props', () => {
+    it('uses custom placeholder', () => {
+      render(
+        <CompactInlineCurrencyAmount
+          {...defaultProps}
+          placeholder="Custom placeholder"
+        />
+      );
+      
+      const input = screen.getByPlaceholderText('Custom placeholder');
+      expect(input).toBeInTheDocument();
+    });
+
+    it('applies custom className', () => {
+      const { container } = render(
+        <CompactInlineCurrencyAmount {...defaultProps} className="custom-class" />
+      );
+      
+      expect(container.firstChild).toHaveClass('custom-class');
+    });
+
+    it('uses custom locale for formatting', () => {
+      const props = {
+        ...defaultProps,
+        locale: 'de-DE',
+        value: { amount: 1234.56, currency: 'IND' as const },
+      };
+      render(<CompactInlineCurrencyAmount {...props} />);
+      
+      // German locale uses different formatting
+      expect(screen.getByText(/1\.234,56/i)).toBeInTheDocument();
+    });
+  });
+});

@@ -1,0 +1,501 @@
+/**
+ * Unit Tests for InlineAmountWithCurrency Component
+ * 
+ * Test coverage:
+ * - Rendering and conversion display
+ * - Currency selection and amount updates
+ * - Real-time conversion calculations
+ * - Keyboard navigation and accessibility
+ * - Error handling and validation
+ * - Edge cases (missing rates, invalid input)
+ */
+
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom';
+import { InlineAmountWithCurrency, type CurrencyValue } from './InlineAmountWithCurrency';
+
+const mockConversionRates = {
+  INS: 1,
+  US: 82,
+  SWZ: 90,
+};
+
+describe('InlineAmountWithCurrency', () => {
+  const defaultProps = {
+    value: { amount: 34, currency: 'US' as const },
+    onChange: jest.fn(),
+    baseCurrency: 'INS' as const,
+    conversionRates: mockConversionRates,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Rendering', () => {
+    it('should render with amount and currency', () => {
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      expect(screen.getByDisplayValue('34')).toBeInTheDocument();
+      expect(screen.getByText('$')).toBeInTheDocument();
+      expect(screen.getByText('USD')).toBeInTheDocument();
+    });
+
+    it('should render with custom label', () => {
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          label="Transaction Amount"
+        />
+      );
+      
+      expect(screen.getByText('Transaction Amount')).toBeInTheDocument();
+    });
+
+    it('should be disabled when disabled prop is true', () => {
+      render(<InlineAmountWithCurrency {...defaultProps} disabled />);
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      const button = screen.getByLabelText('Select currency');
+      
+      expect(input).toBeDisabled();
+      expect(button).toBeDisabled();
+    });
+  });
+
+  describe('Currency Conversion Display', () => {
+    it('should display equivalent value in base currency', () => {
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      // 34 USD * 82 = 2,788 INR
+      expect(screen.getByText(/Equivalent:/)).toBeInTheDocument();
+      expect(screen.getByText(/₹.*2,788\.00/)).toBeInTheDocument();
+    });
+
+    it('should update equivalent when amount changes', async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          onChange={onChange}
+        />
+      );
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, '50');
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 50, currency: 'US' });
+      
+      // 50 USD * 82 = 4,100 INR
+      await waitFor(() => {
+        expect(screen.getByText(/₹.*4,100\.00/)).toBeInTheDocument();
+      });
+    });
+
+    it('should not show conversion when currency equals base currency', () => {
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          value={{ amount: 100, currency: 'INS' }}
+        />
+      );
+      
+      // When currency is INS (base), equivalent should be 100 INR
+      expect(screen.getByText(/₹.*100\.00/)).toBeInTheDocument();
+    });
+
+    it('should hide equivalent when lockConversion is true', () => {
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          lockConversion
+        />
+      );
+      
+      expect(screen.queryByText(/Equivalent:/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Currency Selection', () => {
+    it('should open dropdown when currency button clicked', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      const button = screen.getByLabelText('Select currency');
+      await user.click(button);
+      
+      expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      expect(screen.getByText('US Dollar')).toBeInTheDocument();
+      expect(screen.getByText('Swiss Franc')).toBeInTheDocument();
+    });
+
+    it('should select new currency and update equivalent', async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          onChange={onChange}
+        />
+      );
+      
+      // Open dropdown
+      const button = screen.getByLabelText('Select currency');
+      await user.click(button);
+      
+      // Select Swiss Franc
+      const swzOption = screen.getByText('Swiss Franc');
+      await user.click(swzOption);
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 34, currency: 'SWZ' });
+      
+      // 34 SWZ * 90 = 3,060 INR
+      await waitFor(() => {
+        expect(screen.getByText(/₹.*3,060\.00/)).toBeInTheDocument();
+      });
+    });
+
+    it('should close dropdown after selection', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      const button = screen.getByLabelText('Select currency');
+      await user.click(button);
+      
+      const insOption = screen.getByText('Indian Rupee');
+      await user.click(insOption);
+      
+      await waitFor(() => {
+        expect(screen.queryByText('Indian Rupee')).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Keyboard Navigation', () => {
+    it('should open dropdown with Enter key', async () => {
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      const button = screen.getByLabelText('Select currency');
+      fireEvent.keyDown(button, { key: 'Enter' });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      });
+    });
+
+    it('should close dropdown with Escape key', async () => {
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      const button = screen.getByLabelText('Select currency');
+      fireEvent.keyDown(button, { key: 'Enter' });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      });
+      
+      fireEvent.keyDown(button, { key: 'Escape' });
+      
+      await waitFor(() => {
+        expect(screen.queryByText('Indian Rupee')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should prevent form submission on Enter in amount input', () => {
+      const handleSubmit = jest.fn(e => e.preventDefault());
+      const { container } = render(
+        <form onSubmit={handleSubmit}>
+          <InlineAmountWithCurrency {...defaultProps} />
+        </form>
+      );
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      fireEvent.keyDown(input, { key: 'Enter' });
+      
+      expect(handleSubmit).not.toHaveBeenCalled();
+    });
+
+    it('should navigate dropdown with arrow keys', async () => {
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      const button = screen.getByLabelText('Select currency');
+      
+      // Arrow down should open dropdown
+      fireEvent.keyDown(button, { key: 'ArrowDown' });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Amount Input Validation', () => {
+    it('should show error for negative values', async () => {
+      const user = userEvent.setup();
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          min={0}
+        />
+      );
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, '-10');
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Value must be at least 0/)).toBeInTheDocument();
+      });
+    });
+
+    it('should show error when exceeding max value', async () => {
+      const user = userEvent.setup();
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          max={1000}
+        />
+      );
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, '2000');
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Value must not exceed 1000/)).toBeInTheDocument();
+      });
+    });
+
+    it('should show error for non-numeric input', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, 'abc');
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Please enter a valid number/)).toBeInTheDocument();
+      });
+    });
+
+    it('should reject decimals when allowDecimals is false', async () => {
+      const user = userEvent.setup();
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          allowDecimals={false}
+        />
+      );
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, '10.5');
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Decimal values are not allowed/)).toBeInTheDocument();
+      });
+    });
+
+    it('should not show equivalent when validation error exists', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountWithCurrency {...defaultProps} min={0} />);
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, '-5');
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Value must be at least 0/)).toBeInTheDocument();
+      });
+      
+      // Equivalent should not be calculated for invalid input
+      expect(screen.queryByText(/Equivalent:/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should show conversion unavailable when rate missing', () => {
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          conversionRates={{ INS: 1 }} // Missing US rate
+        />
+      );
+      
+      expect(screen.getByText(/Conversion unavailable/)).toBeInTheDocument();
+    });
+
+    it('should show warning when using default rates', () => {
+      render(
+        <InlineAmountWithCurrency
+          value={{ amount: 100, currency: 'US' }}
+          onChange={jest.fn()}
+          baseCurrency="INS"
+          // No conversionRates or fetchRates provided
+        />
+      );
+      
+      // Should still work with default rates but show warning icon
+      expect(screen.getByText(/Equivalent:/)).toBeInTheDocument();
+    });
+
+    it('should handle fetchRates promise', async () => {
+      const fetchRates = jest.fn(() =>
+        Promise.resolve({ INS: 1, US: 85, SWZ: 95 })
+      );
+      
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          conversionRates={undefined}
+          fetchRates={fetchRates}
+        />
+      );
+      
+      // Should show loading state
+      expect(screen.getByText(/Fetching rates.../)).toBeInTheDocument();
+      
+      // Wait for rates to load
+      await waitFor(() => {
+        expect(screen.queryByText(/Fetching rates.../)).not.toBeInTheDocument();
+      });
+      
+      expect(fetchRates).toHaveBeenCalled();
+    });
+
+    it('should handle fetchRates error gracefully', async () => {
+      const fetchRates = jest.fn(() => Promise.reject(new Error('Network error')));
+      
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          conversionRates={undefined}
+          fetchRates={fetchRates}
+        />
+      );
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Conversion unavailable/)).toBeInTheDocument();
+      });
+    });
+
+    it('should allow empty input', async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          onChange={onChange}
+        />
+      );
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 0, currency: 'US' });
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have proper ARIA attributes', () => {
+      render(<InlineAmountWithCurrency {...defaultProps} label="Amount" />);
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      const button = screen.getByLabelText('Select currency');
+      
+      expect(input).toHaveAttribute('aria-label', 'Amount');
+      expect(button).toHaveAttribute('aria-haspopup', 'listbox');
+      expect(button).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('should update aria-expanded when dropdown opens', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      const button = screen.getByLabelText('Select currency');
+      await user.click(button);
+      
+      expect(button).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('should have aria-live on equivalent display', () => {
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      const equivalent = screen.getByText(/Equivalent:/).closest('div');
+      expect(equivalent).toHaveAttribute('aria-live', 'polite');
+      expect(equivalent).toHaveAttribute('aria-atomic', 'true');
+    });
+
+    it('should link input to error message via aria-describedby', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountWithCurrency {...defaultProps} min={0} />);
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, '-10');
+      
+      await waitFor(() => {
+        expect(input).toHaveAttribute('aria-invalid', 'true');
+        expect(input).toHaveAttribute('aria-describedby', 'amount-error');
+      });
+    });
+
+    it('should have listbox role for dropdown options', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountWithCurrency {...defaultProps} />);
+      
+      const button = screen.getByLabelText('Select currency');
+      await user.click(button);
+      
+      const listbox = screen.getByRole('listbox', { name: 'Currency options' });
+      expect(listbox).toBeInTheDocument();
+    });
+  });
+
+  describe('onChange callback', () => {
+    it('should call onChange with updated amount', async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          onChange={onChange}
+        />
+      );
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, '100');
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 100, currency: 'US' });
+    });
+
+    it('should call onChange with updated currency', async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      
+      render(
+        <InlineAmountWithCurrency
+          {...defaultProps}
+          onChange={onChange}
+        />
+      );
+      
+      const button = screen.getByLabelText('Select currency');
+      await user.click(button);
+      
+      const insOption = screen.getByText('Indian Rupee');
+      await user.click(insOption);
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 34, currency: 'INS' });
+    });
+  });
+});

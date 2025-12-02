@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAppStore } from '@/store/app-store';
-import { Subscription, categoryOptions, departmentOptions, User } from '@/lib/types';
+import { Subscription, categoryOptions, departmentOptions, User, locationOptions, frequencyOptions, currencyOptions, typeOfRequestOptions } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,17 +32,22 @@ import { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, Clock, User as UserIcon } from 'lucide-react';
+import { CalendarIcon, Clock, User as UserIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { addMonths, differenceInCalendarMonths, format, isValid } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LocationDropdown, LocationOption } from '@/components/LocationDropdown';
+import { CompactInlineCurrencyAmount, type CurrencyAmountValue } from '@/components/CompactInlineCurrencyAmount';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const USD_TO_INR_RATE = 83;
 
 const formSchema = z.object({
-  amount: z.coerce.number().min(0.01, 'Amount must be greater than 0.'),
-  currency: z.enum(['USD', 'INR']),
+  amountWithCurrency: z.object({
+    amount: z.number().min(0.01, 'Amount must be greater than 0.'),
+    currency: z.enum(['IND', 'SWZ', 'US']),
+  }),
   startDate: z.date({ required_error: "A start date is required."}),
   endDate: z.date({ required_error: "An end date is required."}),
   duration: z.string().min(1, 'Duration is required.'),
@@ -53,6 +58,10 @@ const formSchema = z.object({
   poc: z.string().min(1, 'Person of contact is required.'),
   justification: z.string().min(20, 'Justification must be at least 20 characters.'),
   alertDays: z.coerce.number().min(1, 'Must be at least 1 day.').max(60, 'Cannot be more than 60 days.'),
+  location: z.enum(['Office - Hyd Brigade', 'Office - Hyd KKH', 'Office - Hyd Other', 'NIAT - Aurora', 'NIAT - Yenepoya Managlore', 'NIAT - CDU', 'NIAT - Takshasila', 'NIAT - S-Vyasa', 'NIAT - BITS - Farah', 'NIAT - AMET', 'NIAT - CIET - LAM', 'NIAT - NIU', 'NIAT - ADYPU', 'NIAT - VGU', 'NIAT - CITY - Mothadaka', 'NIAT - NSRIT', 'NIAT - NRI', 'NIAT - Mallareddy', 'NIAT - Annamacharya', 'NIAT - SGU', 'NIAT - Sharda', 'NIAT - Crescent', 'Other']),
+  locationCustom: z.string().optional(),
+  frequencyNew: z.enum(['Quarterly', 'Monthly', 'Yearly', 'Usage-based']),
+  typeOfRequest: z.enum(['Invoice', 'Quotation']),
 });
 
 interface RenewRequestDialogProps {
@@ -75,8 +84,7 @@ export default function RenewRequestDialog({ subscription, trigger, disabled, to
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      amount: subscription.cost,
-      currency: 'USD',
+      amountWithCurrency: { amount: subscription.cost, currency: 'IND' as const },
       startDate: new Date(),
       endDate: addMonths(new Date(), subscription.duration),
       duration: subscription.duration.toString(),
@@ -87,16 +95,27 @@ export default function RenewRequestDialog({ subscription, trigger, disabled, to
       poc: subscription.poc || subscription.requestedBy,
       justification: '',
       alertDays: subscription.alertDays || 10,
+      location: subscription.location || 'Office - Hyd Brigade',
+      locationCustom: '',
+      frequencyNew: subscription.frequencyNew || 'Monthly',
+      typeOfRequest: subscription.typeOfRequest || 'Invoice',
     },
   });
 
   const { watch, setValue, getValues } = form;
-  const amount = watch('amount');
-  const currency = watch('currency');
+  const amountWithCurrency = watch('amountWithCurrency');
+  const location = watch('location');
   const startDate = watch('startDate');
   const endDate = watch('endDate');
   const duration = watch('duration');
   const department = watch('department');
+
+  // Conversion rates for inline currency selector
+  const conversionRates = {
+    IND: 1,
+    US: 82,
+    SWZ: 90,
+  };
 
   useEffect(() => {
     if (department) {
@@ -106,16 +125,6 @@ export default function RenewRequestDialog({ subscription, trigger, disabled, to
       setHod(null);
     }
   }, [department, users]);
-
-  useEffect(() => {
-    let newInrValue = 0;
-    if (currency === 'USD') {
-        newInrValue = amount * USD_TO_INR_RATE;
-    } else {
-        newInrValue = amount;
-    }
-    setInrValue(newInrValue.toFixed(2));
-  }, [amount, currency]);
 
   // Sync End Date when Start Date or Duration changes
   useEffect(() => {
@@ -164,7 +173,20 @@ export default function RenewRequestDialog({ subscription, trigger, disabled, to
     }
     const finalDuration = values.duration === 'custom' ? values.durationCustom || 0 : parseInt(values.duration, 10);
     
-    renewSubscription(subscription.id, finalDuration, values.amount, values.justification, values.alertDays);
+    // Convert to INR for storage (base currency)
+    const costInINR = values.amountWithCurrency.amount * conversionRates[values.amountWithCurrency.currency];
+    
+    renewSubscription(
+      subscription.id, 
+      finalDuration, 
+      costInINR, 
+      values.justification, 
+      values.alertDays,
+      values.location === 'Other' && values.locationCustom ? values.locationCustom : values.location,
+      values.frequencyNew,
+      values.amountWithCurrency.currency, // Pass the currency from the compact inline selector
+      values.typeOfRequest
+    );
     toast({
         title: "Renewal Request Submitted!",
         description: `Your renewal request for ${subscription.toolName} has been sent to ${hod.name} for approval.`,
@@ -206,55 +228,26 @@ export default function RenewRequestDialog({ subscription, trigger, disabled, to
                         <Input readOnly value={subscription.vendorName} className="bg-muted" />
                     </FormItem>
                     
-                    <div className="flex items-end gap-2">
-                        <FormField
-                            control={form.control}
-                            name="amount"
-                            render={({ field }) => (
-                                <FormItem className="flex-1">
-                                    <FormLabel>Amount</FormLabel>
-                                    <FormControl>
-                                        <div className="relative">
-                                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                                                {getValues('currency') === 'USD' ? '$' : '₹'}
-                                            </span>
-                                            <Input type="number" {...field} className="pl-7" />
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="currency"
-                            render={({ field }) => (
-                                <FormItem>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger className="w-[80px]">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="USD">USD</SelectItem>
-                                        <SelectItem value="INR">INR</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-
-                    <FormItem>
-                        <FormLabel>Equivalent In</FormLabel>
-                        <div className="relative">
-                           <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                                {getValues('currency') === 'USD' ? '₹' : '$'}
-                            </span>
-                            <Input readOnly value={getValues('currency') === 'USD' ? inrValue : (amount / USD_TO_INR_RATE).toFixed(2)} className="pl-7 bg-muted" />
-                        </div>
-                    </FormItem>
+                    <FormField
+                        control={form.control}
+                        name="amountWithCurrency"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Amount</FormLabel>
+                                <FormControl>
+                                    <CompactInlineCurrencyAmount
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        baseCurrency="IND"
+                                        conversionRates={conversionRates}
+                                        min={0.01}
+                                        placeholder="Enter amount"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
                     <FormField
                         control={form.control}
@@ -371,6 +364,84 @@ export default function RenewRequestDialog({ subscription, trigger, disabled, to
 
                     <FormField
                         control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Location</FormLabel>
+                                <FormControl>
+                                    <LocationDropdown
+                                        options={locationOptions.map(loc => ({ label: loc, value: loc }))}
+                                        value={field.value}
+                                        onChange={(value, otherText) => {
+                                            field.onChange(value);
+                                            if (otherText) {
+                                                form.setValue('locationCustom', otherText);
+                                            }
+                                        }}
+                                        placeholder="Select location"
+                                        className="w-full"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {location === 'Other' && (
+                        <FormField
+                            control={form.control}
+                            name="locationCustom"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Custom Location</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Enter custom location" {...field} />
+                                    </FormControl>
+                                    <FormDescription>
+                                        Please specify the location
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+
+                    <FormField
+                        control={form.control}
+                        name="frequencyNew"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Frequency (Billing)</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select frequency" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {frequencyOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="typeOfRequest"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Type of Request</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {typeOfRequestOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
                         name="category"
                         render={({ field }) => (
                             <FormItem>
@@ -451,21 +522,19 @@ export default function RenewRequestDialog({ subscription, trigger, disabled, to
                             </FormItem>
                         )}
                     />
-                </div>
-                
-                <div className="col-span-1 md:col-span-2">
+                    
                     <FormField
-                    control={form.control}
-                    name="justification"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Justification - Why renewal is required</FormLabel>
-                        <FormControl>
-                            <Textarea rows={4} placeholder="Explain why this renewal is needed and the expected benefits..." {...field} />
-                        </FormControl>
-                         <FormMessage />
-                        </FormItem>
-                    )}
+                        control={form.control}
+                        name="justification"
+                        render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                                <FormLabel>Justification - Why renewal is required</FormLabel>
+                                <FormControl>
+                                    <Textarea rows={4} placeholder="Explain why this renewal is needed and the expected benefits..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
                     />
                 </div>
                 

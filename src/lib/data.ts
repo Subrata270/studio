@@ -4,10 +4,10 @@ import { add, formatISO } from 'date-fns';
 const today = new Date();
 
 export const mockUsers: User[] = [
-  // Employees
-  { id: 'user-1', name: 'Alice Smith', email: 'alice@example.com', password: 'password', role: 'employee', subrole: null, department: 'Marketing' },
-  { id: 'user-2', name: 'Bob Johnson', email: 'bob@example.com', password: 'password', role: 'employee', subrole: null, department: 'Engineering' },
-  {id: 'user-8', name: 'abc', email: 'abc@example.com', password: 'password', role: 'employee', subrole: null, department: 'IT' },
+  // POCs (Point of Contact)
+  { id: 'user-1', name: 'Alice Smith', email: 'alice@example.com', password: 'password', role: 'poc', subrole: null, department: 'Marketing' },
+  { id: 'user-2', name: 'Bob Johnson', email: 'bob@example.com', password: 'password', role: 'poc', subrole: null, department: 'Engineering' },
+  {id: 'user-8', name: 'abc', email: 'abc@example.com', password: 'password', role: 'poc', subrole: null, department: 'IT' },
   
   // HODs
   { id: 'user-3', name: 'Charles Brown (HOD)', email: 'charles@example.com', password: 'password', role: 'hod', isHOD: true, subrole: null, department: 'Marketing' },
@@ -17,8 +17,7 @@ export const mockUsers: User[] = [
   { id: 'user-5', name: 'Ethan Hunt (APA)', email: 'ethan@example.com', password: 'password', role: 'finance', subrole: 'apa', department: 'Marketing' },
   { id: 'user-6', name: 'Fiona Glenanne (AM)', email: 'fiona@example.com', password: 'password', role: 'finance', subrole: 'am', department: 'Finance' },
 
-  // Admin
-  { id: 'user-7', name: 'Grace O-Malley (Admin)', email: 'grace@example.com', password: 'password', role: 'admin', subrole: null, department: 'IT' },
+
 ];
 
 export const mockSubscriptions: Subscription[] = [

@@ -125,7 +125,7 @@ export default function FirebaseTestPage() {
 
       <div style={{ marginTop: '20px' }}>
         <a 
-          href="/login/admin" 
+ 
           style={{ 
             display: 'inline-block',
             padding: '10px 20px', 

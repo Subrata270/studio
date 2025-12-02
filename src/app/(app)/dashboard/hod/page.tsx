@@ -14,7 +14,7 @@ import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import SubscriptionHistory from "../../components/subscription-history";
-import DeclineDetailsDialog from "../employee/decline-details-dialog";
+import DeclineDetailsDialog from "../poc/decline-details-dialog";
 import { cn } from "@/lib/utils";
 
 const ApprovalActions = ({ subscription }: { subscription: Subscription }) => {

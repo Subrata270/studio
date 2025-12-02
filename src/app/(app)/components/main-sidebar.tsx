@@ -17,10 +17,10 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 const navItems = {
-  employee: [
-    { href: "/dashboard/employee", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/dashboard/employee/history", label: "History", icon: History },
-    { href: "/dashboard/employee/reports", label: "Reports", icon: FileText },
+  poc: [
+    { href: "/dashboard/poc", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard/poc/history", label: "History", icon: History },
+    { href: "/dashboard/poc/reports", label: "Reports", icon: FileText },
   ],
   hod: [
     { href: "/dashboard/hod", label: "Dashboard", icon: LayoutDashboard },
@@ -30,10 +30,6 @@ const navItems = {
   finance: [
     { href: "/dashboard/finance", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/finance/payments", label: "Payments", icon: FileText },
-  ],
-  admin: [
-    { href: "/dashboard/admin", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/dashboard/admin/users", label: "Users", icon: FileText },
   ],
 }
 

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAppStore } from '@/store/app-store';
-import { departmentOptions, User } from '@/lib/types';
+import { departmentOptions, User, locationOptions, frequencyOptions, currencyOptions, typeOfRequestOptions } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,9 +33,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, Upload, Clock, User as UserIcon } from 'lucide-react';
+import { CalendarIcon, Upload, Clock, User as UserIcon, Check, ChevronsUpDown } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { format, addMonths, differenceInCalendarMonths, isValid, formatISO } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LocationDropdown, LocationOption } from '@/components/LocationDropdown';
+import { CompactInlineCurrencyAmount, type CurrencyAmountValue } from '@/components/CompactInlineCurrencyAmount';
 import { useState, useEffect, useMemo } from 'react';
 import { vendorToolMapping, pricingRules, USD_TO_INR_RATE } from '@/lib/pricing';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -45,15 +48,22 @@ const formSchema = z.object({
   toolName: z.array(z.string()).min(1, 'Please select at least one tool.'),
   toolNameCustom: z.string().optional(),
   frequency: z.enum(['Monthly', 'Quarterly', 'Yearly', 'One-time']),
-  amount: z.coerce.number().min(0, 'Amount must be a positive number.'),
-  currency: z.enum(['USD', 'INR']),
+  amountWithCurrency: z.object({
+    amount: z.number().min(0, 'Amount must be a positive number.'),
+    currency: z.enum(['IND', 'SWZ', 'US']),
+  }),
   startDate: z.date({ required_error: "A start date is required."}),
+
   endDate: z.date({ required_error: "An end date is required."}),
   poc: z.string().min(1, 'Person of contact is required.'),
   purpose: z.string().min(20, 'Purpose must be at least 20 characters.'),
   department: z.string().min(1, 'Please select a department.'),
   departmentCustom: z.string().optional(),
   alertDays: z.coerce.number().min(1, 'Must be at least 1 day.').max(60, 'Cannot be more than 60 days.'),
+  location: z.enum(['Office - Hyd Brigade', 'Office - Hyd KKH', 'Office - Hyd Other', 'NIAT - Aurora', 'NIAT - Yenepoya Managlore', 'NIAT - CDU', 'NIAT - Takshasila', 'NIAT - S-Vyasa', 'NIAT - BITS - Farah', 'NIAT - AMET', 'NIAT - CIET - LAM', 'NIAT - NIU', 'NIAT - ADYPU', 'NIAT - VGU', 'NIAT - CITY - Mothadaka', 'NIAT - NSRIT', 'NIAT - NRI', 'NIAT - Mallareddy', 'NIAT - Annamacharya', 'NIAT - SGU', 'NIAT - Sharda', 'NIAT - Crescent', 'Other']),
+  locationCustom: z.string().optional(),
+  frequencyNew: z.enum(['Quarterly', 'Monthly', 'Yearly', 'Usage-based']),
+  typeOfRequest: z.enum(['Invoice', 'Quotation']),
 });
 
 interface NewRequestDialogProps {
@@ -74,13 +84,16 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
       toolName: [],
       toolNameCustom: '',
       frequency: 'Monthly',
-      amount: 0,
-      currency: 'USD',
+      amountWithCurrency: { amount: 0, currency: 'IND' as const },
       poc: currentUser?.email || '',
       purpose: '',
       department: currentUser?.department || '',
       departmentCustom: '',
       alertDays: 10,
+      location: 'Office - Hyd Brigade',
+      locationCustom: '',
+      frequencyNew: 'Monthly',
+      typeOfRequest: 'Invoice',
     },
   });
 
@@ -89,8 +102,8 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
   const vendorName = watch('vendorName');
   const toolName = watch('toolName');
   const frequency = watch('frequency');
-  const amount = watch('amount');
-  const currency = watch('currency');
+  const amountWithCurrency = watch('amountWithCurrency');
+  const location = watch('location');
   const startDate = watch('startDate');
   const department = watch('department');
 
@@ -121,18 +134,19 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
         }
       });
       
-      setValue('amount', totalAmount);
-      trigger('amount');
+      setValue('amountWithCurrency', { ...amountWithCurrency, amount: totalAmount });
+      trigger('amountWithCurrency');
     } else {
-      setValue('amount', 0);
+      setValue('amountWithCurrency', { ...amountWithCurrency, amount: 0 });
     }
   }, [vendorName, toolName, frequency, setValue, trigger]);
 
-  // Update INR value when amount or currency changes
-  useEffect(() => {
-    const cost = currency === 'USD' ? amount * USD_TO_INR_RATE : amount;
-    setInrValue(cost.toFixed(2));
-  }, [amount, currency]);
+  // Conversion rates for inline currency selector
+  const conversionRates = {
+    IND: 1,
+    US: 82,
+    SWZ: 90,
+  };
 
   // Update End Date when Start Date or Frequency changes
   useEffect(() => {
@@ -168,7 +182,8 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
         return;
     }
     
-    const costInUSD = values.currency === 'INR' ? values.amount / USD_TO_INR_RATE : values.amount;
+    // Convert to INR for storage (base currency)
+    const costInINR = values.amountWithCurrency.amount * conversionRates[values.amountWithCurrency.currency];
     const finalToolNames = values.toolName.join(', '); // Join multiple tools with comma
     const finalDepartment = getValues('department') === 'add-custom' ? getValues('departmentCustom') : getValues('department');
     const durationInMonths = differenceInCalendarMonths(values.endDate, values.startDate) || 1;
@@ -176,13 +191,16 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
     addSubscriptionRequest({
       toolName: finalToolNames,
       duration: durationInMonths,
-      cost: costInUSD,
+      cost: costInINR,
       purpose: values.purpose,
       department: finalDepartment!,
       vendorName: values.vendorName,
       alertDays: values.alertDays,
       expiryDate: formatISO(values.endDate),
-      hodId: hod.id
+      hodId: hod.id,
+      location: values.location === 'Other' && values.locationCustom ? values.locationCustom : values.location,
+      frequencyNew: values.frequencyNew,
+      typeOfRequest: values.typeOfRequest,
     });
     toast({
         title: "Request Submitted!",
@@ -266,55 +284,104 @@ export default function NewRequestDialog({ open, onOpenChange }: NewRequestDialo
                         )}
                     />
 
-                    <div className="flex items-end gap-2">
+                    <FormField
+                        control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Location</FormLabel>
+                                <FormControl>
+                                    <LocationDropdown
+                                        options={locationOptions.map(loc => ({ label: loc, value: loc }))}
+                                        value={field.value}
+                                        onChange={(value, otherText) => {
+                                            field.onChange(value);
+                                            if (otherText) {
+                                                form.setValue('locationCustom', otherText);
+                                            }
+                                        }}
+                                        placeholder="Select location"
+                                        className="w-full"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {location === 'Other' && (
                         <FormField
                             control={form.control}
-                            name="amount"
+                            name="locationCustom"
                             render={({ field }) => (
-                                <FormItem className="flex-1">
-                                    <FormLabel>Amount</FormLabel>
+                                <FormItem>
+                                    <FormLabel>Custom Location</FormLabel>
                                     <FormControl>
-                                        <div className="relative">
-                                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                                                {getValues('currency') === 'USD' ? '$' : '₹'}
-                                            </span>
-                                            <Input type="number" step="0.01" {...field} className="pl-7" />
-                                        </div>
+                                        <Input placeholder="Enter custom location" {...field} />
                                     </FormControl>
+                                    <FormDescription>
+                                        Please specify the location
+                                    </FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-                        <FormField
-                            control={form.control}
-                            name="currency"
-                            render={({ field }) => (
-                                <FormItem>
+                    )}
+
+                    <FormField
+                        control={form.control}
+                        name="frequencyNew"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Frequency (Billing)</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger className="w-[80px]">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    </FormControl>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select frequency" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="USD">USD</SelectItem>
-                                        <SelectItem value="INR">INR</SelectItem>
+                                        {frequencyOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                    
-                    <FormItem>
-                        <FormLabel>Equivalent In</FormLabel>
-                        <div className="relative">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                                {getValues('currency') === 'USD' ? '₹' : '$'}
-                            </span>
-                            <Input readOnly value={getValues('currency') === 'USD' ? inrValue : (amount / USD_TO_INR_RATE).toFixed(2)} className="pl-7 bg-muted" />
-                        </div>
-                    </FormItem>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="typeOfRequest"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Type of Request</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {typeOfRequestOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="amountWithCurrency"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Amount</FormLabel>
+                                <FormControl>
+                                    <CompactInlineCurrencyAmount
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        baseCurrency="IND"
+                                        conversionRates={conversionRates}
+                                        min={0}
+                                        placeholder="Enter amount"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                     
                     <div className='md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6 items-end'>
                          <FormField

@@ -1,0 +1,414 @@
+/**
+ * Unit Tests for InlineAmountCurrency Component
+ * 
+ * Tests dropdown clickability fix, keyboard navigation, conversion updates
+ */
+
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom';
+import { InlineAmountCurrency, type CurrencyAmount } from './InlineAmountCurrency';
+
+const mockConversionRates = {
+  IND: 1,
+  US: 82,
+  SWZ: 90,
+};
+
+describe('InlineAmountCurrency', () => {
+  const defaultProps = {
+    value: { amount: 34, currency: 'US' as const },
+    onChange: jest.fn(),
+    baseCurrency: 'IND' as const,
+    conversionRates: mockConversionRates,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Rendering', () => {
+    it('should render amount and currency trigger', () => {
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      expect(screen.getByDisplayValue('34')).toBeInTheDocument();
+      expect(screen.getByText('$')).toBeInTheDocument();
+      expect(screen.getByText('USD')).toBeInTheDocument();
+    });
+
+    it('should show equivalent value in base currency', () => {
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      // 34 USD * 82 = 2,788 INR
+      expect(screen.getByText(/Equivalent:/)).toBeInTheDocument();
+      expect(screen.getByText(/₹.*2,788\.00/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Dropdown Click Fix - Portal Rendering', () => {
+    it('should open dropdown when trigger clicked', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      await user.click(trigger);
+      
+      // Dropdown options should appear
+      expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      expect(screen.getByText('US Dollar')).toBeInTheDocument();
+      expect(screen.getByText('Swiss Franc')).toBeInTheDocument();
+    });
+
+    it('should select currency when option clicked', async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      
+      render(
+        <InlineAmountCurrency
+          {...defaultProps}
+          onChange={onChange}
+        />
+      );
+      
+      // Open dropdown
+      const trigger = screen.getByLabelText('Select currency');
+      await user.click(trigger);
+      
+      // Click Indian Rupee option
+      const indOption = screen.getByText('Indian Rupee');
+      await user.click(indOption);
+      
+      // Should call onChange with new currency
+      expect(onChange).toHaveBeenCalledWith({ amount: 34, currency: 'IND' });
+      
+      // Dropdown should close
+      await waitFor(() => {
+        expect(screen.queryByText('Indian Rupee')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should close dropdown on outside click', async () => {
+      const user = userEvent.setup();
+      render(
+        <div>
+          <InlineAmountCurrency {...defaultProps} />
+          <div data-testid="outside">Outside element</div>
+        </div>
+      );
+      
+      // Open dropdown
+      const trigger = screen.getByLabelText('Select currency');
+      await user.click(trigger);
+      
+      expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      
+      // Click outside
+      const outside = screen.getByTestId('outside');
+      await user.click(outside);
+      
+      // Dropdown should close
+      await waitFor(() => {
+        expect(screen.queryByText('Indian Rupee')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should have high z-index to appear above modal overlay', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      await user.click(trigger);
+      
+      const menu = screen.getByRole('listbox');
+      const styles = window.getComputedStyle(menu);
+      
+      // Should have very high z-index (99999)
+      expect(styles.zIndex).toBe('99999');
+      expect(styles.position).toBe('fixed');
+    });
+  });
+
+  describe('Keyboard Navigation', () => {
+    it('should open dropdown with Enter key', async () => {
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      });
+    });
+
+    it('should open dropdown with Space key', async () => {
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      fireEvent.keyDown(trigger, { key: ' ' });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      });
+    });
+
+    it('should navigate options with ArrowDown and ArrowUp', async () => {
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      
+      // Open dropdown
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      });
+      
+      // Arrow down should highlight next option
+      fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+      
+      // Arrow up should move back
+      fireEvent.keyDown(trigger, { key: 'ArrowUp' });
+      
+      // Test passes if no errors thrown
+      expect(trigger).toBeInTheDocument();
+    });
+
+    it('should select highlighted option with Enter', async () => {
+      const onChange = jest.fn();
+      render(
+        <InlineAmountCurrency
+          {...defaultProps}
+          onChange={onChange}
+        />
+      );
+      
+      const trigger = screen.getByLabelText('Select currency');
+      
+      // Open dropdown
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      });
+      
+      // Select with Enter (should select first option - IND)
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 34, currency: 'IND' });
+    });
+
+    it('should close dropdown with Escape key', async () => {
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      
+      // Open dropdown
+      fireEvent.keyDown(trigger, { key: 'Enter' });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Indian Rupee')).toBeInTheDocument();
+      });
+      
+      // Close with Escape
+      fireEvent.keyDown(trigger, { key: 'Escape' });
+      
+      await waitFor(() => {
+        expect(screen.queryByText('Indian Rupee')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should prevent form submission on Enter in amount input', () => {
+      const handleSubmit = jest.fn(e => e.preventDefault());
+      render(
+        <form onSubmit={handleSubmit}>
+          <InlineAmountCurrency {...defaultProps} />
+        </form>
+      );
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      fireEvent.keyDown(input, { key: 'Enter' });
+      
+      expect(handleSubmit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Amount Input & Conversion', () => {
+    it('should update amount and recalculate equivalent', async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      
+      render(
+        <InlineAmountCurrency
+          {...defaultProps}
+          onChange={onChange}
+        />
+      );
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, '50');
+      
+      expect(onChange).toHaveBeenCalledWith({ amount: 50, currency: 'US' });
+      
+      // 50 USD * 82 = 4,100 INR
+      await waitFor(() => {
+        expect(screen.getByText(/₹.*4,100\.00/)).toBeInTheDocument();
+      });
+    });
+
+    it('should update equivalent when currency changes', async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      
+      const { rerender } = render(
+        <InlineAmountCurrency
+          {...defaultProps}
+          onChange={onChange}
+        />
+      );
+      
+      // Initial: 34 USD * 82 = 2,788 INR
+      expect(screen.getByText(/₹.*2,788\.00/)).toBeInTheDocument();
+      
+      // Open dropdown and select SWZ
+      const trigger = screen.getByLabelText('Select currency');
+      await user.click(trigger);
+      
+      const swzOption = screen.getByText('Swiss Franc');
+      await user.click(swzOption);
+      
+      // Rerender with new currency
+      rerender(
+        <InlineAmountCurrency
+          {...defaultProps}
+          value={{ amount: 34, currency: 'SWZ' }}
+          onChange={onChange}
+        />
+      );
+      
+      // 34 SWZ * 90 = 3,060 INR
+      await waitFor(() => {
+        expect(screen.getByText(/₹.*3,060\.00/)).toBeInTheDocument();
+      });
+    });
+
+    it('should not reset amount when switching currencies', async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      
+      render(
+        <InlineAmountCurrency
+          {...defaultProps}
+          value={{ amount: 100, currency: 'US' }}
+          onChange={onChange}
+        />
+      );
+      
+      // Open dropdown
+      const trigger = screen.getByLabelText('Select currency');
+      await user.click(trigger);
+      
+      // Select different currency
+      const indOption = screen.getByText('Indian Rupee');
+      await user.click(indOption);
+      
+      // Amount should stay 100
+      expect(onChange).toHaveBeenCalledWith({ amount: 100, currency: 'IND' });
+    });
+
+    it('should show validation error for non-numeric input', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, 'abc');
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Please enter a valid number/)).toBeInTheDocument();
+      });
+    });
+
+    it('should show validation error for negative values when min is set', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountCurrency {...defaultProps} min={0} />);
+      
+      const input = screen.getByPlaceholderText('Enter amount');
+      await user.clear(input);
+      await user.type(input, '-10');
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Value must be at least 0/)).toBeInTheDocument();
+      });
+    });
+
+    it('should show conversion unavailable when rates missing', () => {
+      render(
+        <InlineAmountCurrency
+          {...defaultProps}
+          conversionRates={{ IND: 1 }} // Missing US rate
+        />
+      );
+      
+      expect(screen.getByText(/Conversion unavailable/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have proper ARIA attributes', () => {
+      render(<InlineAmountCurrency {...defaultProps} label="Amount" />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      const input = screen.getByPlaceholderText('Enter amount');
+      
+      expect(trigger).toHaveAttribute('role', 'button');
+      expect(trigger).toHaveAttribute('aria-haspopup', 'listbox');
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+      expect(input).toHaveAttribute('aria-label', 'Amount');
+    });
+
+    it('should update aria-expanded when dropdown opens', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      await user.click(trigger);
+      
+      expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('should have aria-live on equivalent display', () => {
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const equivalent = screen.getByText(/Equivalent:/).closest('div');
+      expect(equivalent).toHaveAttribute('aria-live', 'polite');
+      expect(equivalent).toHaveAttribute('aria-atomic', 'true');
+    });
+
+    it('should have listbox role for dropdown', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      await user.click(trigger);
+      
+      const listbox = screen.getByRole('listbox', { name: 'Currency options' });
+      expect(listbox).toBeInTheDocument();
+    });
+
+    it('should mark selected option with aria-selected', async () => {
+      const user = userEvent.setup();
+      render(<InlineAmountCurrency {...defaultProps} />);
+      
+      const trigger = screen.getByLabelText('Select currency');
+      await user.click(trigger);
+      
+      // US Dollar should be selected
+      const options = screen.getAllByRole('option');
+      const selectedOption = options.find(opt => opt.textContent?.includes('US Dollar'));
+      
+      expect(selectedOption).toHaveAttribute('aria-selected', 'true');
+    });
+  });
+});

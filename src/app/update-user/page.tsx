@@ -132,8 +132,8 @@ export default function UpdateUserPage() {
         <p><strong>Department:</strong> Student success</p>
         <p style={{ marginTop: '15px', fontSize: '14px', color: '#666' }}>
           After updating, try logging in at:<br />
-          <a href="/login/employee" style={{ color: '#0969da' }}>
-            /login/employee
+          <a href="/login/poc" style={{ color: '#0969da' }}>
+            /login/poc
           </a>
         </p>
       </div>

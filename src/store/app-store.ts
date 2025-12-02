@@ -15,17 +15,31 @@ interface AppState {
   subscriptions: Subscription[];
   notifications: AppNotification[];
   currentUser: User | null;
+  sessionExpiry: number | null;
   isSyncing: boolean;
   hasFetchedFromFirestore: boolean;
   register: (user: Omit<User, 'id' | 'googleUid'>) => void;
   registerWithGoogle: () => Promise<User | null>;
-  registerWithMicrosoft: () => Promise<User | null>;
+  registerWithMicrosoft: (role?: Role, subrole?: SubRole, department?: string) => Promise<User | null>;
   login: (email: string, password: string, role: Role, subrole?: SubRole) => User | null;
   loginWithGoogle: (role: Role, subrole?: SubRole) => Promise<User | null>;
   loginWithMicrosoft: (role: Role, subrole?: SubRole) => Promise<User | null>;
+  autoLoginWithMicrosoft: () => Promise<User | null>;
   logout: () => void;
+  checkSession: () => boolean;
+  updateUserRole: (email: string, role: Role, subrole?: SubRole | null, department?: string) => Promise<void>;
   addSubscriptionRequest: (request: Omit<Subscription, 'id' | 'status' | 'requestDate' | 'requestedBy'>) => void;
-  renewSubscription: (subscriptionId: string, renewalDuration: number, updatedCost: number, remarks: string, alertDays: number) => void;
+  renewSubscription: (
+    subscriptionId: string, 
+    renewalDuration: number, 
+    updatedCost: number, 
+    remarks: string, 
+    alertDays: number,
+    location?: string,
+    frequencyNew?: string,
+    currencyNew?: string,
+    typeOfRequest?: string
+  ) => void;
   updateSubscriptionStatus: (subscriptionId: string, status: SubscriptionStatus, reason?: string) => void;
   forwardToAM: (subscriptionId: string, apaForwarderId: string) => void;
   submitAMLog: (subscriptionId: string, amLogData: Omit<Subscription['finance']['amLog'], 'by' | 'at'>) => void;
@@ -178,6 +192,7 @@ export const useAppStore = create<AppState>()(
       subscriptions: mockSubscriptions,
       notifications: mockNotifications,
       currentUser: null,
+      sessionExpiry: null,
       isSyncing: false,
       hasFetchedFromFirestore: false,
 
@@ -231,7 +246,9 @@ export const useAppStore = create<AppState>()(
 
         if (user) {
           console.log('✅ Login successful for:', user.email);
-          set({ currentUser: user });
+          // Set session expiry to 7 days from now
+          const sessionExpiry = Date.now() + (7 * 24 * 60 * 60 * 1000);
+          set({ currentUser: user, sessionExpiry });
           get().addNotification(user.id, `Welcome back, ${user.name}! You've successfully logged in.`);
           return user;
         }
@@ -342,10 +359,146 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      autoLoginWithMicrosoft: async () => {
+        const { auth, firestore } = initializeFirebase();
+        const provider = new OAuthProvider('microsoft.com');
+        provider.setCustomParameters({ prompt: 'select_account' });
+
+        try {
+            const result = await signInWithPopup(auth, provider);
+            const microsoftUser = result.user;
+
+            if (!microsoftUser.email) {
+                throw new Error("Could not retrieve email from Microsoft account.");
+            }
+
+            console.log('🔍 Microsoft login attempt for:', microsoftUser.email);
+            console.log('🔄 Fetching user data directly from Firestore...');
+            
+            // Fetch user directly from Firestore to get the latest role
+            const usersRef = collection(firestore, 'users');
+            const q = await getDocs(usersRef);
+            const firestoreUsers = q.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+            const appUser = firestoreUsers.find(u => u.email === microsoftUser.email);
+            
+            if (!appUser) {
+                console.error('❌ Microsoft login failed: User not found in Firestore');
+                throw new Error("Account not found. Please register first or contact an administrator.");
+            }
+
+            console.log('✅ Microsoft user found in Firestore:', { 
+              email: appUser.email, 
+              role: appUser.role, 
+              subrole: appUser.subrole,
+              department: appUser.department 
+            });
+
+            // Use the fresh data from Firestore
+            const updatedUser: User = { ...appUser, microsoftUid: microsoftUser.uid };
+            
+            // Set session expiry to 7 days from now
+            const sessionExpiry = Date.now() + (7 * 24 * 60 * 60 * 1000);
+            
+            set(state => {
+              const updatedUsers = state.users.map(u => u.id === appUser.id ? updatedUser : u);
+              void persistUsers(updatedUsers);
+              console.log('💾 Setting current user with role from Firestore:', updatedUser.role);
+              return {
+                users: updatedUsers,
+                currentUser: updatedUser,
+                sessionExpiry
+              };
+            });
+            
+            get().addNotification(updatedUser.id, `Welcome back, ${updatedUser.name}! You've successfully logged in with Microsoft.`);
+            console.log('🎉 Microsoft login successful. User will be redirected to:', `/dashboard/${updatedUser.role}`);
+            return updatedUser;
+        } catch (error: any) {
+            if (error.code === 'auth/popup-closed-by-user') {
+                 throw new Error("Login cancelled. Please try again.");
+            }
+            console.error('❌ Microsoft login error:', error);
+            throw error;
+        }
+      },
+
       logout: async () => {
+        console.log('🚪 Logging out user...');
         const { auth } = initializeFirebase();
-        await auth.signOut();
-        set({ currentUser: null });
+        
+        try {
+          // Sign out from Firebase
+          await auth.signOut();
+          console.log('✅ Firebase sign out successful');
+        } catch (error) {
+          console.error('❌ Firebase sign out error:', error);
+        }
+        
+        // Clear current user and session from state
+        set({ currentUser: null, sessionExpiry: null });
+        
+        // Clear localStorage persistence
+        localStorage.removeItem('autotrack-pro-storage');
+        
+        console.log('✅ User logged out successfully');
+      },
+
+      checkSession: () => {
+        const { currentUser, sessionExpiry } = get();
+        
+        // No user logged in
+        if (!currentUser) {
+          console.log('⚠️ No user session found');
+          return false;
+        }
+        
+        // No expiry set (legacy sessions) - allow but set new expiry
+        if (!sessionExpiry) {
+          console.log('⚠️ Legacy session detected, setting new expiry');
+          const newExpiry = Date.now() + (7 * 24 * 60 * 60 * 1000);
+          set({ sessionExpiry: newExpiry });
+          return true;
+        }
+        
+        // Check if session has expired
+        if (Date.now() > sessionExpiry) {
+          console.log('❌ Session expired, logging out...');
+          get().logout();
+          return false;
+        }
+        
+        console.log('✅ Session valid');
+        return true;
+      },
+
+      updateUserRole: async (email, role, subrole = null, department) => {
+        const userToUpdate = get().users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        
+        if (!userToUpdate) {
+          throw new Error("User not found with this email address.");
+        }
+
+        const updatedUser = {
+          ...userToUpdate,
+          role,
+          subrole,
+          ...(department && { department })
+        };
+
+        const updatedUsers = get().users.map(u => 
+          u.email.toLowerCase() === email.toLowerCase() ? updatedUser : u
+        );
+
+        const isCurrentUser = get().currentUser?.email.toLowerCase() === email.toLowerCase();
+        const updatedCurrentUser = isCurrentUser ? updatedUser : get().currentUser;
+
+        set({
+          users: updatedUsers,
+          currentUser: updatedCurrentUser
+        });
+
+        // Persist to Firestore
+        await persistUsers(updatedUsers);
       },
 
       registerWithGoogle: async () => {
@@ -372,7 +525,7 @@ export const useAppStore = create<AppState>()(
                 name: googleUser.displayName || 'Google User',
                 email: googleUser.email,
                 password: '', // No password for OAuth users
-                role: 'employee', // Default role, can be changed later
+                role: 'poc', // Default role
                 subrole: null,
                 department: '', // Will be filled in profile completion
                 googleUid: googleUser.uid,
@@ -400,7 +553,7 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      registerWithMicrosoft: async () => {
+      registerWithMicrosoft: async (role = 'poc', subrole = null, department = '') => {
         const { auth } = initializeFirebase();
         const provider = new OAuthProvider('microsoft.com');
         provider.setCustomParameters({ prompt: 'select_account' });
@@ -425,9 +578,9 @@ export const useAppStore = create<AppState>()(
                 name: microsoftUser.displayName || 'Microsoft User',
                 email: microsoftUser.email,
                 password: '', // No password for OAuth users
-                role: 'employee', // Default role, can be changed later
-                subrole: null,
-                department: '', // Will be filled in profile completion
+                role: role,
+                subrole: subrole,
+                department: department,
                 microsoftUid: microsoftUser.uid,
             };
 
@@ -485,7 +638,7 @@ export const useAppStore = create<AppState>()(
         get().addNotification(hod.id, `New subscription request for ${request.toolName} from ${currentUser.name}.`);
       },
 
-      renewSubscription: (subscriptionId, renewalDuration, updatedCost, remarks, alertDays) => {
+      renewSubscription: (subscriptionId, renewalDuration, updatedCost, remarks, alertDays, location, frequencyNew, currencyNew, typeOfRequest) => {
         const currentUser = get().currentUser;
         if (!currentUser) return;
 
@@ -508,6 +661,10 @@ export const useAppStore = create<AppState>()(
                         requestDate: formatISO(new Date()),
                         renewedOn: formatISO(new Date()),
                         hodId: hod?.id, // Re-assign HOD for the new request
+                        location: location as any,
+                        frequencyNew: frequencyNew as any,
+                        currencyNew: currencyNew as any,
+                        typeOfRequest: typeOfRequest as any,
                         // Reset approval/payment info for the renewal cycle
                         approvedBy: undefined,
                         approvalDate: undefined,
@@ -726,10 +883,26 @@ export const useAppStore = create<AppState>()(
             })));
           }
 
+          // Update current user if they're logged in and their data changed
+          const currentUser = get().currentUser;
+          let updatedCurrentUser = currentUser;
+          if (currentUser && users.length > 0) {
+            const freshUserData = users.find(u => u.email === currentUser.email);
+            if (freshUserData && freshUserData.role !== currentUser.role) {
+              console.log('🔄 Updating current user role from Firestore:', {
+                email: freshUserData.email,
+                oldRole: currentUser.role,
+                newRole: freshUserData.role
+              });
+              updatedCurrentUser = freshUserData;
+            }
+          }
+
           set({
             users: users.length ? users : mockUsers,
             subscriptions: subscriptions.length ? subscriptions : mockSubscriptions,
             notifications: notifications.length ? notifications : mockNotifications,
+            currentUser: updatedCurrentUser,
             isSyncing: false,
             hasFetchedFromFirestore: true,
           });
@@ -742,7 +915,8 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'autotrack-pro-storage',
-      storage: createJSONStorage(() => localStorage), // Use localStorage for persistent auth across sessions
+      storage: createJSONStorage(() => localStorage),
+      version: 2,
     }
   )
 );

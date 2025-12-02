@@ -1,6 +1,6 @@
 
 
-export type Role = 'employee' | 'hod' | 'finance' | 'admin';
+export type Role = 'poc' | 'hod' | 'finance';
 export type SubRole = 'apa' | 'am' | null;
 
 export interface User {
@@ -17,6 +17,37 @@ export interface User {
 }
 
 export type SubscriptionStatus = 'Pending' | 'Approved' | 'Declined' | 'Active' | 'Expired' | 'ForwardedToAM' | 'VerifiedByAM' | 'PaymentCompleted';
+
+export type LocationType = 
+  | 'Office - Hyd Brigade'
+  | 'Office - Hyd KKH'
+  | 'Office - Hyd Other'
+  | 'NIAT - Aurora'
+  | 'NIAT - Yenepoya Managlore'
+  | 'NIAT - CDU'
+  | 'NIAT - Takshasila'
+  | 'NIAT - S-Vyasa'
+  | 'NIAT - BITS - Farah'
+  | 'NIAT - AMET'
+  | 'NIAT - CIET - LAM'
+  | 'NIAT - NIU'
+  | 'NIAT - ADYPU'
+  | 'NIAT - VGU'
+  | 'NIAT - CITY - Mothadaka'
+  | 'NIAT - NSRIT'
+  | 'NIAT - NRI'
+  | 'NIAT - Mallareddy'
+  | 'NIAT - Annamacharya'
+  | 'NIAT - SGU'
+  | 'NIAT - Sharda'
+  | 'NIAT - Crescent'
+  | 'Other';
+
+export type FrequencyType = 'Quarterly' | 'Monthly' | 'Yearly' | 'Usage-based';
+
+export type CurrencyType = 'IND' | 'SWZ' | 'US';
+
+export type TypeOfRequest = 'Invoice' | 'Quotation';
 
 export interface Subscription {
   id: string;
@@ -48,6 +79,10 @@ export interface Subscription {
   paymentMode?: string;
   transactionId?: string;
   invoiceNumber?: string;
+  location?: LocationType;
+  frequencyNew?: FrequencyType;
+  currencyNew?: CurrencyType;
+  typeOfRequest?: TypeOfRequest;
   
   finance?: {
     apaQueueAddedAt?: string;
@@ -85,6 +120,38 @@ export const toolOptions = ['ChatGPT', 'Canva', 'Figma', 'Notion', 'Zoom', 'Adob
 export const departmentOptions = ['Marketing', 'Engineering', 'Finance', 'IT', 'HR', 'Sales', 'Operations'];
 
 export const categoryOptions = ['Software', 'Hardware', 'Services', 'Consulting', 'Training', 'Others'];
+
+export const locationOptions: LocationType[] = [
+  'Office - Hyd Brigade',
+  'Office - Hyd KKH',
+  'Office - Hyd Other',
+  'NIAT - Aurora',
+  'NIAT - Yenepoya Managlore',
+  'NIAT - CDU',
+  'NIAT - Takshasila',
+  'NIAT - S-Vyasa',
+  'NIAT - BITS - Farah',
+  'NIAT - AMET',
+  'NIAT - CIET - LAM',
+  'NIAT - NIU',
+  'NIAT - ADYPU',
+  'NIAT - VGU',
+  'NIAT - CITY - Mothadaka',
+  'NIAT - NSRIT',
+  'NIAT - NRI',
+  'NIAT - Mallareddy',
+  'NIAT - Annamacharya',
+  'NIAT - SGU',
+  'NIAT - Sharda',
+  'NIAT - Crescent',
+  'Other'
+];
+
+export const frequencyOptions: FrequencyType[] = ['Quarterly', 'Monthly', 'Yearly', 'Usage-based'];
+
+export const currencyOptions: CurrencyType[] = ['IND', 'SWZ', 'US'];
+
+export const typeOfRequestOptions: TypeOfRequest[] = ['Invoice', 'Quotation'];
 
 export interface AppNotification {
     id: string;

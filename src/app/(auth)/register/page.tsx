@@ -36,7 +36,7 @@ const formSchema = z.object({
   name: z.string().min(1, 'Please enter your name.'),
   email: z.string().email('Please enter a valid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
-  role: z.enum(['employee', 'hod', 'finance'], { required_error: 'Please select a role.' }),
+  role: z.enum(['poc', 'hod', 'finance'], { required_error: 'Please select a role.' }),
   subrole: z.enum(['apa', 'am']).optional(),
   department: z.string().min(1, 'Please enter your department.'),
 }).refine((data) => {
@@ -144,6 +144,38 @@ export default function RegisterPage() {
   };
 
   const handleMicrosoftRegister = async () => {
+    // Validate that user has selected required fields
+    const role = form.getValues('role');
+    const department = form.getValues('department');
+    const subrole = form.getValues('subrole');
+
+    if (!role) {
+      toast({
+        variant: 'destructive',
+        title: 'Role Required',
+        description: 'Please select your role before signing up with Microsoft.',
+      });
+      return;
+    }
+
+    if (!department) {
+      toast({
+        variant: 'destructive',
+        title: 'Department Required',
+        description: 'Please enter your department before signing up with Microsoft.',
+      });
+      return;
+    }
+
+    if (role === 'finance' && !subrole) {
+      toast({
+        variant: 'destructive',
+        title: 'Finance Role Required',
+        description: 'Please select your finance role (AM or APA) before signing up with Microsoft.',
+      });
+      return;
+    }
+
     if (!isStoreReady) {
       toast({
         variant: 'destructive',
@@ -155,7 +187,7 @@ export default function RegisterPage() {
 
     setIsPending(true);
     try {
-      const user = await registerWithMicrosoft();
+      const user = await registerWithMicrosoft(role, subrole, department);
       if (user) {
         setIsSuccess(true);
         toast({
@@ -248,7 +280,7 @@ export default function RegisterPage() {
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="employee">POC (Department POC)</SelectItem>
+                            <SelectItem value="poc">POC (Department POC)</SelectItem>
                             <SelectItem value="hod">HOD (Head of Department)</SelectItem>
                             <SelectItem value="finance">Finance</SelectItem>
                         </SelectContent>
@@ -332,22 +364,6 @@ export default function RegisterPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleGoogleRegister}
-              disabled={isPending || isSuccess || !isStoreReady}
-            >
-              {isPending ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <FcGoogle className="mr-2 h-5 w-5" />
-                  Sign up with Google
-                </>
-              )}
-            </Button>
-
             <Button 
               variant="outline" 
               className="w-full" 

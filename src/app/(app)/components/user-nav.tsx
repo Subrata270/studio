@@ -23,9 +23,17 @@ export default function UserNav() {
   const { currentUser, logout } = useAppStore()
   const router = useRouter()
 
-  const handleLogout = () => {
-    logout()
-    router.push("/")
+  const handleLogout = async () => {
+    console.log('🔓 User initiated logout...');
+    try {
+      await logout();
+      console.log('✅ Logout successful, redirecting to login...');
+      router.push("/");
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Still redirect even if there's an error
+      router.push("/");
+    }
   }
 
   if (!currentUser) {

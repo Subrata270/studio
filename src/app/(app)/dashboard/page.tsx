@@ -8,10 +8,19 @@ export default function DashboardPage() {
   const currentUser = useAppStore((state) => state.currentUser);
 
   useEffect(() => {
+    console.log('📍 Dashboard page - Current user:', currentUser ? {
+      email: currentUser.email,
+      role: currentUser.role,
+      subrole: currentUser.subrole,
+      department: currentUser.department
+    } : 'null');
+
     if (currentUser) {
-      router.replace(`/dashboard/${currentUser.role}`);
+      const targetPath = `/dashboard/${currentUser.role}`;
+      console.log('🚀 Redirecting to:', targetPath);
+      router.replace(targetPath);
     } else {
-        // If there's no user, maybe they logged out, redirect to home
+        console.log('⚠️ No current user, redirecting to home');
         router.replace('/');
     }
   }, [currentUser, router]);
@@ -19,6 +28,11 @@ export default function DashboardPage() {
   return (
     <div className="flex h-full w-full items-center justify-center">
       <p>Loading your dashboard...</p>
+      {currentUser && (
+        <p className="text-sm text-muted-foreground ml-2">
+          (Redirecting to {currentUser.role} portal...)
+        </p>
+      )}
     </div>
   );
 }

@@ -5,9 +5,9 @@
 import { useAppStore } from "@/store/app-store";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import DepartmentUsageChart from "../../../dashboard/employee/department-usage-chart";
-import VendorHistory from "../../../dashboard/employee/vendor-history";
-import CostHistoryChart from "../../../dashboard/employee/cost-history-chart";
+import DepartmentUsageChart from "../../../dashboard/poc/department-usage-chart";
+import VendorHistory from "../../../dashboard/poc/vendor-history";
+import CostHistoryChart from "../../../dashboard/poc/cost-history-chart";
 import {
     Card,
     CardContent,
