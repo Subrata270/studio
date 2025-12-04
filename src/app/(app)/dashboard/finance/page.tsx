@@ -13,6 +13,7 @@ import { useState } from "react";
 import { Subscription } from "@/lib/types";
 import SubscriptionHistory from "../../components/subscription-history";
 import DeclineDetailsDialog from "../poc/decline-details-dialog";
+import SubscriptionDetailsDialog from "./subscription-details-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -333,6 +334,7 @@ const APAApprovalActions = ({ subscription }: { subscription: Subscription }) =>
 export default function FinanceDashboardPage() {
     const { currentUser, subscriptions, users } = useAppStore();
     const [selectedDeclinedSub, setSelectedDeclinedSub] = useState<Subscription | null>(null);
+    const [selectedApprovedSub, setSelectedApprovedSub] = useState<Subscription | null>(null);
     const [paymentSub, setPaymentSub] = useState<Subscription | null>(null);
     const [amLogSub, setAmLogSub] = useState<Subscription | null>(null);
 
@@ -364,6 +366,10 @@ export default function FinanceDashboardPage() {
         }
     };
     
+    const handleApprovedHistoryClick = (sub: Subscription) => {
+        setSelectedApprovedSub(sub);
+    };
+    
     const handleOpenPaymentDialog = (sub: Subscription) => setPaymentSub(sub);
     const handleOpenAMLogDialog = (sub: Subscription) => setAmLogSub(sub);
 
@@ -376,6 +382,7 @@ export default function FinanceDashboardPage() {
             </header>
 
             {selectedDeclinedSub && <DeclineDetailsDialog subscription={selectedDeclinedSub} open={!!selectedDeclinedSub} onOpenChange={(isOpen) => !isOpen && setSelectedDeclinedSub(null)} />}
+            {selectedApprovedSub && <SubscriptionDetailsDialog subscription={selectedApprovedSub} open={!!selectedApprovedSub} onOpenChange={(isOpen) => !isOpen && setSelectedApprovedSub(null)} />}
             {paymentSub && <APAPaymentExecutionDialog subscription={paymentSub} open={!!paymentSub} onOpenChange={(isOpen) => !isOpen && setPaymentSub(null)} />}
             {amLogSub && <AMLogDialog subscription={amLogSub} open={!!amLogSub} onOpenChange={(isOpen) => !isOpen && setAmLogSub(null)} />}
             
@@ -478,6 +485,7 @@ export default function FinanceDashboardPage() {
                 approvedHistory={paymentHistory}
                 declinedHistory={declinedHistory}
                 onDeclineDoubleClick={handleRowDoubleClick}
+                onApproveDoubleClick={handleApprovedHistoryClick}
             />
         </div>
     );

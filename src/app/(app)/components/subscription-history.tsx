@@ -63,8 +63,8 @@ export default function SubscriptionHistory({ approvedHistory, declinedHistory, 
                                         {approvedHistory.length > 0 ? approvedHistory.map(sub => (
                                             <TableRow 
                                                 key={sub.id}
-                                                onDoubleClick={() => onApproveDoubleClick?.(sub)}
-                                                className={cn(onApproveDoubleClick && 'cursor-pointer hover:bg-green-100/50')}
+                                                onClick={() => onApproveDoubleClick?.(sub)}
+                                                className={cn(onApproveDoubleClick && 'cursor-pointer hover:bg-green-100/50 transition-colors')}
                                             >
                                                 <TableCell className="font-medium">{sub.toolName}</TableCell>
                                                 <TableCell>{getUserName(sub.approvedBy || '')}</TableCell>
@@ -101,9 +101,9 @@ export default function SubscriptionHistory({ approvedHistory, declinedHistory, 
                                         {declinedHistory.length > 0 ? declinedHistory.map(sub => (
                                             <TableRow 
                                                 key={sub.id} 
-                                                onDoubleClick={() => onDeclineDoubleClick?.(sub)}
+                                                onClick={() => onDeclineDoubleClick?.(sub)}
                                                 className={cn(
-                                                    onDeclineDoubleClick && 'cursor-pointer hover:bg-red-100/50'
+                                                    onDeclineDoubleClick && 'cursor-pointer hover:bg-red-100/50 transition-colors'
                                                 )}
                                             >
                                                 <TableCell className="font-medium">{sub.toolName}</TableCell>

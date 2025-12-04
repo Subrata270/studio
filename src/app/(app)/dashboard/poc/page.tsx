@@ -15,6 +15,7 @@ import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Subscription } from "@/lib/types";
 import DeclineDetailsDialog from "./decline-details-dialog";
+import POCSubscriptionDetailsDialog from "./subscription-details-dialog";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +39,7 @@ export default function DepartmentPOCDashboardPage() {
     const { currentUser, subscriptions, triggerRenewalAlert, addSubscriptionRequest, updateSubscriptionDetails } = useAppStore();
     const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
     const [selectedDeclinedSub, setSelectedDeclinedSub] = useState<Subscription | null>(null);
+    const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
     const { toast } = useToast();
 
     if (!currentUser) return null;
@@ -140,7 +142,13 @@ export default function DepartmentPOCDashboardPage() {
     const handleRowDoubleClick = (sub: Subscription) => {
         if (sub.status === 'Declined') {
             setSelectedDeclinedSub(sub);
+        } else {
+            setSelectedSubscription(sub);
         }
+    };
+
+    const handleRowClick = (sub: Subscription) => {
+        setSelectedSubscription(sub);
     };
 
     const isRenewable = (sub: Subscription) => {
@@ -167,6 +175,17 @@ export default function DepartmentPOCDashboardPage() {
                     onOpenChange={(isOpen) => {
                         if (!isOpen) {
                             setSelectedDeclinedSub(null);
+                        }
+                    }}
+                />
+            )}
+            {selectedSubscription && (
+                <POCSubscriptionDetailsDialog
+                    subscription={selectedSubscription}
+                    open={!!selectedSubscription}
+                    onOpenChange={(isOpen) => {
+                        if (!isOpen) {
+                            setSelectedSubscription(null);
                         }
                     }}
                 />
@@ -315,7 +334,11 @@ export default function DepartmentPOCDashboardPage() {
                                     const daysLeft = sub.expiryDate ? differenceInCalendarDays(new Date(sub.expiryDate), new Date()) : null;
                                     
                                     return (
-                                        <TableRow key={sub.id}>
+                                        <TableRow 
+                                            key={sub.id}
+                                            onClick={() => handleRowClick(sub)}
+                                            className="cursor-pointer hover:bg-blue-50/50 transition-colors"
+                                        >
                                             <TableCell className="font-medium">{sub.toolName}</TableCell>
                                             <TableCell>${sub.cost.toFixed(2)}</TableCell>
                                             <TableCell>
@@ -375,9 +398,10 @@ export default function DepartmentPOCDashboardPage() {
                                 {pendingRequests.length > 0 ? pendingRequests.map(sub => (
                                     <TableRow 
                                         key={sub.id}
-                                        onDoubleClick={() => handleRowDoubleClick(sub)}
+                                        onClick={() => sub.status === 'Declined' ? handleRowDoubleClick(sub) : handleRowClick(sub)}
                                         className={cn(
-                                            sub.status === 'Declined' && 'cursor-pointer hover:bg-red-50/50'
+                                            'cursor-pointer transition-colors',
+                                            sub.status === 'Declined' ? 'hover:bg-red-50/50' : 'hover:bg-blue-50/50'
                                         )}
                                     >
                                         <TableCell className="font-medium">{sub.toolName}</TableCell>

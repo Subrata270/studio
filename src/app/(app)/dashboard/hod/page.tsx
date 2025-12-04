@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import SubscriptionHistory from "../../components/subscription-history";
 import DeclineDetailsDialog from "../poc/decline-details-dialog";
+import HODSubscriptionDetailsDialog from "./subscription-details-dialog";
 import { cn } from "@/lib/utils";
 
 const ApprovalActions = ({ subscription }: { subscription: Subscription }) => {
@@ -102,6 +103,7 @@ const ApprovalActions = ({ subscription }: { subscription: Subscription }) => {
 export default function HODDashboardPage() {
     const { currentUser, subscriptions, users } = useAppStore();
     const [selectedDeclinedSub, setSelectedDeclinedSub] = useState<Subscription | null>(null);
+    const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
 
     if (!currentUser || currentUser.role !== 'hod') return null;
 
@@ -117,7 +119,13 @@ export default function HODDashboardPage() {
     const handleRowDoubleClick = (sub: Subscription) => {
         if (sub.status === 'Declined') {
             setSelectedDeclinedSub(sub);
+        } else {
+            setSelectedSubscription(sub);
         }
+    };
+
+    const handleRowClick = (sub: Subscription) => {
+        setSelectedSubscription(sub);
     };
 
     return (
@@ -134,6 +142,17 @@ export default function HODDashboardPage() {
                     onOpenChange={(isOpen) => {
                         if (!isOpen) {
                             setSelectedDeclinedSub(null);
+                        }
+                    }}
+                />
+            )}
+            {selectedSubscription && (
+                <HODSubscriptionDetailsDialog
+                    subscription={selectedSubscription}
+                    open={!!selectedSubscription}
+                    onOpenChange={(isOpen) => {
+                        if (!isOpen) {
+                            setSelectedSubscription(null);
                         }
                     }}
                 />
@@ -197,7 +216,11 @@ export default function HODDashboardPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {pendingApprovals.length > 0 ? pendingApprovals.map(sub => (
-                                        <TableRow key={sub.id}>
+                                        <TableRow 
+                                            key={sub.id}
+                                            onClick={() => handleRowClick(sub)}
+                                            className="cursor-pointer hover:bg-blue-50/50 transition-colors"
+                                        >
                                             <TableCell className="font-medium">{sub.toolName}</TableCell>
                                             <TableCell>{getUserName(sub.requestedBy)}</TableCell>
                                             <TableCell>${sub.cost.toFixed(2)}</TableCell>
@@ -217,6 +240,7 @@ export default function HODDashboardPage() {
                     approvedHistory={approvedHistory}
                     declinedHistory={declinedHistory}
                     onDeclineDoubleClick={handleRowDoubleClick}
+                    onApproveDoubleClick={handleRowClick}
                 />
             </div>
         </div>
