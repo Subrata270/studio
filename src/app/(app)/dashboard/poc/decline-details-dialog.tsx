@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { Copy, XCircle, Calendar, DollarSign, FileText, User, MapPin, Clock, Building2, AlertTriangle } from "lucide-react";
+import { Copy, XCircle, Calendar, DollarSign, FileText, User, MapPin, Clock, Building2, AlertTriangle, Hash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -64,17 +64,15 @@ export default function DeclineDetailsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-red-600">
-            <XCircle className="h-6 w-6" />
-            Declined Subscription Details - {subscription.toolName}
-          </DialogTitle>
-          <DialogDescription>
-            This subscription request was declined. Review the complete details and decline reason below.
-          </DialogDescription>
-        </DialogHeader>
-
-        <ScrollArea className="max-h-[70vh] pr-4">
+                <DialogHeader>
+                    <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-red-600">
+                        <XCircle className="h-6 w-6" />
+                        <span className="font-mono">[{subscription.id}]</span> {subscription.toolName}
+                    </DialogTitle>
+                    <DialogDescription>
+                        This subscription request was declined. Review the complete details and decline reason below.
+                    </DialogDescription>
+                </DialogHeader>        <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-6">
             {/* Decline Alert Banner */}
             <Card className="border-red-500 bg-red-50">

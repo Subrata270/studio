@@ -207,6 +207,7 @@ export default function HODDashboardPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>ID</TableHead>
                                         <TableHead>Tool</TableHead>
                                         <TableHead>Requested By</TableHead>
                                         <TableHead>Cost</TableHead>
@@ -221,6 +222,7 @@ export default function HODDashboardPage() {
                                             onClick={() => handleRowClick(sub)}
                                             className="cursor-pointer hover:bg-blue-50/50 transition-colors"
                                         >
+                                            <TableCell className="font-mono text-xs text-muted-foreground">{sub.id}</TableCell>
                                             <TableCell className="font-medium">{sub.toolName}</TableCell>
                                             <TableCell>{getUserName(sub.requestedBy)}</TableCell>
                                             <TableCell>${sub.cost.toFixed(2)}</TableCell>

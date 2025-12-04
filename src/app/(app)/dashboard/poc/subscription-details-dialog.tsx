@@ -5,7 +5,7 @@ import { Subscription } from "@/lib/types";
 import { useAppStore } from "@/store/app-store";
 import { format, differenceInCalendarDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, DollarSign, FileText, User, MapPin, Clock, Building2, AlertCircle, CheckCircle, XCircle, Hourglass } from "lucide-react";
+import { Calendar, DollarSign, FileText, User, MapPin, Clock, Building2, AlertCircle, CheckCircle, XCircle, Hourglass, Hash } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -76,7 +76,7 @@ export default function POCSubscriptionDetailsDialog({ subscription, open, onOpe
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                         <FileText className="h-6 w-6 text-primary" />
-                        Subscription Details - {subscription.toolName}
+                        <span className="font-mono text-primary">[{subscription.id}]</span> {subscription.toolName}
                     </DialogTitle>
                     <DialogDescription>
                         Complete information about your subscription request
@@ -143,6 +143,13 @@ export default function POCSubscriptionDetailsDialog({ subscription, open, onOpe
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Hash className="h-4 w-4" />
+                                        Subscription ID
+                                    </p>
+                                    <p className="font-mono font-semibold text-primary">{subscription.id}</p>
+                                </div>
                                 <div className="space-y-1">
                                     <p className="text-sm text-muted-foreground flex items-center gap-2">
                                         <FileText className="h-4 w-4" />

@@ -321,6 +321,7 @@ export default function DepartmentPOCDashboardPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>ID</TableHead>
                                     <TableHead>Tool</TableHead>
                                     <TableHead>Cost</TableHead>
                                     <TableHead>Expires In</TableHead>
@@ -339,6 +340,7 @@ export default function DepartmentPOCDashboardPage() {
                                             onClick={() => handleRowClick(sub)}
                                             className="cursor-pointer hover:bg-blue-50/50 transition-colors"
                                         >
+                                            <TableCell className="font-mono text-xs text-muted-foreground">{sub.id}</TableCell>
                                             <TableCell className="font-medium">{sub.toolName}</TableCell>
                                             <TableCell>${sub.cost.toFixed(2)}</TableCell>
                                             <TableCell>
@@ -388,6 +390,7 @@ export default function DepartmentPOCDashboardPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>ID</TableHead>
                                     <TableHead>Tool</TableHead>
                                     <TableHead>Department</TableHead>
                                     <TableHead>Requested On</TableHead>
@@ -404,6 +407,7 @@ export default function DepartmentPOCDashboardPage() {
                                             sub.status === 'Declined' ? 'hover:bg-red-50/50' : 'hover:bg-blue-50/50'
                                         )}
                                     >
+                                        <TableCell className="font-mono text-xs text-muted-foreground">{sub.id}</TableCell>
                                         <TableCell className="font-medium">{sub.toolName}</TableCell>
                                         <TableCell>{sub.department}</TableCell>
                                         <TableCell>{format(new Date(sub.requestDate), "PP")}</TableCell>

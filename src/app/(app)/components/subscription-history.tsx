@@ -54,6 +54,7 @@ export default function SubscriptionHistory({ approvedHistory, declinedHistory, 
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
+                                            <TableHead>ID</TableHead>
                                             <TableHead>Tool</TableHead>
                                             <TableHead>Approved By</TableHead>
                                             <TableHead>Date</TableHead>
@@ -66,11 +67,12 @@ export default function SubscriptionHistory({ approvedHistory, declinedHistory, 
                                                 onClick={() => onApproveDoubleClick?.(sub)}
                                                 className={cn(onApproveDoubleClick && 'cursor-pointer hover:bg-green-100/50 transition-colors')}
                                             >
+                                                <TableCell className="font-mono text-xs text-muted-foreground">{sub.id}</TableCell>
                                                 <TableCell className="font-medium">{sub.toolName}</TableCell>
                                                 <TableCell>{getUserName(sub.approvedBy || '')}</TableCell>
                                                 <TableCell>{format(new Date(sub.approvalDate || sub.requestDate), "PP")}</TableCell>
                                             </TableRow>
-                                        )) : <TableRow><TableCell colSpan={3} className="text-center">No approved history.</TableCell></TableRow>}
+                                        )) : <TableRow><TableCell colSpan={4} className="text-center">No approved history.</TableCell></TableRow>}
                                     </TableBody>
                                 </Table>
                             </ScrollArea>
@@ -92,6 +94,7 @@ export default function SubscriptionHistory({ approvedHistory, declinedHistory, 
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
+                                            <TableHead>ID</TableHead>
                                             <TableHead>Tool</TableHead>
                                             <TableHead>Declined By</TableHead>
                                             <TableHead>Date</TableHead>
@@ -106,11 +109,12 @@ export default function SubscriptionHistory({ approvedHistory, declinedHistory, 
                                                     onDeclineDoubleClick && 'cursor-pointer hover:bg-red-100/50 transition-colors'
                                                 )}
                                             >
+                                                <TableCell className="font-mono text-xs text-muted-foreground">{sub.id}</TableCell>
                                                 <TableCell className="font-medium">{sub.toolName}</TableCell>
                                                 <TableCell>{sub.approvedBy ? getUserName(sub.approvedBy) : 'N/A'}</TableCell>
                                                 <TableCell>{format(new Date(sub.approvalDate || sub.requestDate), "PP")}</TableCell>
                                             </TableRow>
-                                        )) : <TableRow><TableCell colSpan={3} className="text-center">No declined history.</TableCell></TableRow>}
+                                        )) : <TableRow><TableCell colSpan={4} className="text-center">No declined history.</TableCell></TableRow>}
                                     </TableBody>
                                 </Table>
                             </ScrollArea>

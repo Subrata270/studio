@@ -66,7 +66,7 @@ export default function SubscriptionDetailsDialog({ subscription, open, onOpenCh
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                         <FileText className="h-6 w-6 text-primary" />
-                        Subscription Details - {subscription.toolName}
+                        <span className="font-mono text-primary">[{subscription.id}]</span> {subscription.toolName}
                     </DialogTitle>
                     <DialogDescription>
                         Complete subscription and payment information
@@ -84,6 +84,13 @@ export default function SubscriptionDetailsDialog({ subscription, open, onOpenCh
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Hash className="h-4 w-4" />
+                                        Subscription ID
+                                    </p>
+                                    <p className="font-mono font-semibold text-primary">{subscription.id}</p>
+                                </div>
                                 <div className="space-y-1">
                                     <p className="text-sm text-muted-foreground flex items-center gap-2">
                                         <FileText className="h-4 w-4" />

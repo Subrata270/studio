@@ -51,6 +51,7 @@ export type TypeOfRequest = 'Invoice' | 'Quotation';
 
 export interface Subscription {
   id: string;
+  uniqueId?: string; // Display ID like SUB-001, SUB-002
   toolName: string;
   vendorName?: string;
   duration: number; // in months

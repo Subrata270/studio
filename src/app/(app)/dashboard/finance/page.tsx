@@ -414,10 +414,11 @@ export default function FinanceDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <Table>
-                            <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Department</TableHead><TableHead>Cost</TableHead><TableHead>HOD</TableHead><TableHead>Requested</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Tool</TableHead><TableHead>Department</TableHead><TableHead>Cost</TableHead><TableHead>HOD</TableHead><TableHead>Requested</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
                             <TableBody>
                                 {requestsForApaApproval.length > 0 ? requestsForApaApproval.map(sub => (
                                     <TableRow key={sub.id}>
+                                        <TableCell className="font-mono text-xs text-muted-foreground">{sub.id}</TableCell>
                                         <TableCell className="font-medium">{sub.toolName}</TableCell>
                                         <TableCell>{sub.department}</TableCell>
                                         <TableCell>${sub.cost.toFixed(2)}</TableCell>
@@ -435,10 +436,11 @@ export default function FinanceDashboardPage() {
                     <CardHeader><CardTitle>APA Queue - Pending Payment Execution</CardTitle><CardDescription>Requests verified by AM and ready for final manual payment.</CardDescription></CardHeader>
                     <CardContent>
                         <Table>
-                            <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Department</TableHead><TableHead>Planned Cost</TableHead><TableHead>AM Verifier</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Tool</TableHead><TableHead>Department</TableHead><TableHead>Planned Cost</TableHead><TableHead>AM Verifier</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
                             <TableBody>
                                 {requestsForApaExecution.length > 0 ? requestsForApaExecution.map(sub => (
                                     <TableRow key={sub.id} onDoubleClick={() => handleRowDoubleClick(sub)} className="cursor-pointer hover:bg-muted/50">
+                                        <TableCell className="font-mono text-xs text-muted-foreground">{sub.id}</TableCell>
                                         <TableCell className="font-medium">{sub.toolName}</TableCell>
                                         <TableCell>{sub.department}</TableCell>
                                         <TableCell>${sub.finance?.amLog?.plannedAmount.toFixed(2)} {sub.finance?.amLog?.plannedCurrency}</TableCell>
@@ -462,10 +464,11 @@ export default function FinanceDashboardPage() {
                     <CardHeader><CardTitle>AM Queue - Payment Verification</CardTitle><CardDescription>Requests forwarded by APA for your review and payment planning.</CardDescription></CardHeader>
                     <CardContent>
                         <Table>
-                            <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Department</TableHead><TableHead>Cost</TableHead><TableHead>APA Forwarder</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Tool</TableHead><TableHead>Department</TableHead><TableHead>Cost</TableHead><TableHead>APA Forwarder</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
                             <TableBody>
                                 {requestsForAmVerification.length > 0 ? requestsForAmVerification.map(sub => (
                                     <TableRow key={sub.id} onDoubleClick={() => handleRowDoubleClick(sub)} className="cursor-pointer hover:bg-muted/50">
+                                        <TableCell className="font-mono text-xs text-muted-foreground">{sub.id}</TableCell>
                                         <TableCell className="font-medium">{sub.toolName}</TableCell>
                                         <TableCell>{sub.department}</TableCell>
                                         <TableCell>${sub.cost.toFixed(2)}</TableCell>
