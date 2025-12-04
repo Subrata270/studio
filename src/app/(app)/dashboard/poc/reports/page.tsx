@@ -4,10 +4,16 @@
 import SubscriptionHistory from "@/app/(app)/components/subscription-history";
 import { useAppStore } from "@/store/app-store";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { Subscription } from "@/lib/types";
+import DeclineDetailsDialog from "../decline-details-dialog";
+import POCSubscriptionDetailsDialog from "../subscription-details-dialog";
 
 
 export default function EmployeeReportsPage() {
     const { currentUser, subscriptions } = useAppStore();
+    const [selectedDeclinedSub, setSelectedDeclinedSub] = useState<Subscription | null>(null);
+    const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
 
     if (!currentUser) return null;
 
@@ -15,6 +21,14 @@ export default function EmployeeReportsPage() {
 
     const approvedHistory = departmentSubscriptions.filter(s => s.status === 'Approved' || s.status === 'Active' || s.status === 'Expired');
     const declinedHistory = departmentSubscriptions.filter(s => s.status === 'Declined');
+
+    const handleDeclineClick = (sub: Subscription) => {
+        setSelectedDeclinedSub(sub);
+    };
+
+    const handleApproveClick = (sub: Subscription) => {
+        setSelectedSubscription(sub);
+    };
 
     const cardVariants = {
         hidden: { opacity: 0, y: 20 },
@@ -37,10 +51,35 @@ export default function EmployeeReportsPage() {
                 <p className="text-slate-500">View historical data for approved and declined subscriptions in your department.</p>
             </header>
 
+            {selectedDeclinedSub && (
+                <DeclineDetailsDialog
+                    subscription={selectedDeclinedSub}
+                    open={!!selectedDeclinedSub}
+                    onOpenChange={(isOpen) => {
+                        if (!isOpen) {
+                            setSelectedDeclinedSub(null);
+                        }
+                    }}
+                />
+            )}
+            {selectedSubscription && (
+                <POCSubscriptionDetailsDialog
+                    subscription={selectedSubscription}
+                    open={!!selectedSubscription}
+                    onOpenChange={(isOpen) => {
+                        if (!isOpen) {
+                            setSelectedSubscription(null);
+                        }
+                    }}
+                />
+            )}
+
             <motion.div variants={cardVariants} initial="hidden" animate="visible" custom={0}>
                 <SubscriptionHistory
                     approvedHistory={approvedHistory}
                     declinedHistory={declinedHistory}
+                    onDeclineDoubleClick={handleDeclineClick}
+                    onApproveDoubleClick={handleApproveClick}
                 />
             </motion.div>
         </div>
