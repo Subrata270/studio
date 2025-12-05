@@ -3,17 +3,18 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { User, Subscription, AppNotification, Role, SubRole, SubscriptionStatus } from '@/lib/types';
+import { User, Subscription, AppNotification, Role, SubRole, SubscriptionStatus, DeletedSubscription } from '@/lib/types';
 import { mockUsers, mockSubscriptions, mockNotifications } from '@/lib/data';
 import { add, formatISO } from 'date-fns';
 import { getAuth, signInWithPopup, GoogleAuthProvider, OAuthProvider, User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, getDocs, writeBatch, Firestore } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, Firestore, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
 interface AppState {
   users: User[];
   subscriptions: Subscription[];
   notifications: AppNotification[];
+  deletedSubscriptions: DeletedSubscription[];
   currentUser: User | null;
   sessionExpiry: number | null;
   isSyncing: boolean;
@@ -48,6 +49,9 @@ interface AppState {
   readNotification: (notificationId: string) => void;
   triggerRenewalAlert: (subscriptionId: string) => void;
   updateSubscriptionDetails: (subscriptionId: string, updatedDetails: Partial<Subscription>) => void;
+  updateSubscription: (subscriptionId: string, updatedData: Partial<Subscription>) => void;
+  deleteSubscription: (subscriptionId: string) => void;
+  addDeletedSubscription: (subscription: Subscription, justification: string) => void;
   syncFromFirestore: () => Promise<void>;
 }
 
@@ -191,6 +195,7 @@ export const useAppStore = create<AppState>()(
       users: mockUsers,
       subscriptions: mockSubscriptions,
       notifications: mockNotifications,
+      deletedSubscriptions: [],
       currentUser: null,
       sessionExpiry: null,
       isSyncing: false,
@@ -836,6 +841,41 @@ export const useAppStore = create<AppState>()(
         });
       },
 
+      updateSubscription: (subscriptionId, updatedData) => {
+        set((state) => {
+            const updatedSubscriptions = state.subscriptions.map((sub) =>
+                sub.id === subscriptionId ? { ...sub, ...updatedData } : sub
+            );
+            void persistSubscriptions(updatedSubscriptions);
+            return { subscriptions: updatedSubscriptions };
+        });
+      },
+
+      deleteSubscription: (subscriptionId) => {
+        set((state) => {
+            const updatedSubscriptions = state.subscriptions.filter((sub) => sub.id !== subscriptionId);
+            void persistSubscriptions(updatedSubscriptions);
+            return { subscriptions: updatedSubscriptions };
+        });
+      },
+
+      addDeletedSubscription: (subscription, justification) => {
+        const currentUser = get().currentUser;
+        if (!currentUser) return;
+
+        const deletedSubscription: DeletedSubscription = {
+          id: `del-${Date.now()}`,
+          subscription,
+          deletedBy: currentUser.id,
+          deletedAt: formatISO(new Date()),
+          justification,
+        };
+
+        set((state) => ({
+          deletedSubscriptions: [...state.deletedSubscriptions, deletedSubscription],
+        }));
+      },
+
       syncFromFirestore: async () => {
         const { isSyncing, hasFetchedFromFirestore } = get();
         if (isSyncing || hasFetchedFromFirestore) {
@@ -873,6 +913,28 @@ export const useAppStore = create<AppState>()(
             subscriptions: subscriptions.length,
             notifications: notifications.length
           });
+          
+          // Check if admin user exists, if not add it
+          const adminExists = users.some(u => u.email === 'admin@example.com');
+          if (!adminExists && users.length > 0) {
+            console.log('👤 Admin user not found, adding to Firestore...');
+            const adminUser: User = {
+              id: 'user-admin',
+              name: 'Admin User',
+              email: 'admin@example.com',
+              password: 'admin123',
+              role: 'admin',
+              subrole: null,
+              department: 'Administration'
+            };
+            try {
+              await setDoc(doc(firestore, COLLECTIONS.users, adminUser.id), adminUser);
+              users.push(adminUser);
+              console.log('✅ Admin user added successfully');
+            } catch (error) {
+              console.error('❌ Error adding admin user:', error);
+            }
+          }
           
           // Log user emails for debugging
           if (users.length > 0) {

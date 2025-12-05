@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar"
 import Logo from "@/components/logo"
 import { useAppStore } from "@/store/app-store"
-import { LayoutDashboard, FileText, LifeBuoy, History } from "lucide-react"
+import { LayoutDashboard, FileText, LifeBuoy, History, Shield } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -30,6 +30,11 @@ const navItems = {
   finance: [
     { href: "/dashboard/finance", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/finance/payments", label: "Payments", icon: FileText },
+  ],
+  admin: [
+    { href: "/dashboard/admin", label: "Dashboard", icon: Shield },
+    { href: "/dashboard/admin/deleted-subscriptions", label: "Deleted Subscriptions", icon: FileText },
+    { href: "/dashboard/admin/reports", label: "Reports", icon: FileText },
   ],
 }
 

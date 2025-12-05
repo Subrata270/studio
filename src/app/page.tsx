@@ -45,6 +45,7 @@ const portalMapping: { [key: string]: { role: Role; path: string } } = {
   "Department POC Portal": { role: "poc", path: "/login/poc" },
   "HOD Portal": { role: "hod", path: "/login/hod" },
   "Finance Portal": { role: "finance", path: "/login/finance" },
+  "Admin Portal": { role: "admin", path: "/login/admin" },
 }
 
 export default function UnifiedLoginPage() {
@@ -247,6 +248,9 @@ export default function UnifiedLoginPage() {
                             </SelectItem>
                             <SelectItem value="Finance Portal">
                               Finance Portal
+                            </SelectItem>
+                            <SelectItem value="Admin Portal">
+                              Admin Portal
                             </SelectItem>
                           </SelectContent>
                         </Select>

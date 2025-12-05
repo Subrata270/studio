@@ -36,9 +36,9 @@ const formSchema = z.object({
   name: z.string().min(1, 'Please enter your name.'),
   email: z.string().email('Please enter a valid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
-  role: z.enum(['poc', 'hod', 'finance'], { required_error: 'Please select a role.' }),
+  role: z.enum(['poc', 'hod', 'finance', 'admin'], { required_error: 'Please select a role.' }),
   subrole: z.enum(['apa', 'am']).optional(),
-  department: z.string().min(1, 'Please enter your department.'),
+  department: z.string().optional(),
 }).refine((data) => {
   // If role is finance, subrole is required
   if (data.role === 'finance') {
@@ -48,6 +48,15 @@ const formSchema = z.object({
 }, {
   message: "Please select a finance role (AM or APA)",
   path: ["subrole"],
+}).refine((data) => {
+  // If role is not admin, department is required
+  if (data.role !== 'admin') {
+    return data.department !== undefined && data.department.length > 0;
+  }
+  return true;
+}, {
+  message: "Please enter your department",
+  path: ["department"],
 });
 
 export default function RegisterPage() {
@@ -90,6 +99,7 @@ export default function RegisterPage() {
       const userData = {
         ...values,
         subrole: values.subrole || null, // Ensure subrole is null if not provided
+        department: values.role === 'admin' ? 'Administration' : values.department || '', // Set department for admin
       };
       register(userData);
       setIsSuccess(true);
@@ -266,8 +276,7 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
-               <div className="grid grid-cols-2 gap-4">
-                <FormField
+               <FormField
                     control={form.control}
                     name="role"
                     render={({ field }) => (
@@ -283,26 +292,34 @@ export default function RegisterPage() {
                             <SelectItem value="poc">POC (Department POC)</SelectItem>
                             <SelectItem value="hod">HOD (Head of Department)</SelectItem>
                             <SelectItem value="finance">Finance</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                         </Select>
                         <FormMessage />
                     </FormItem>
                     )}
                 />
-                <FormField
-                    control={form.control}
-                    name="department"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Department</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Marketing" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-               </div>
+                
+                {selectedRole !== 'admin' && (
+                  <FormField
+                      control={form.control}
+                      name="department"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Department</FormLabel>
+                          <FormControl>
+                          <Input placeholder="e.g., Marketing" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                )}
+                {selectedRole === 'admin' && (
+                  <div className="flex items-center justify-center p-3 text-sm text-muted-foreground bg-muted/50 rounded-md">
+                    Admin role has access to all departments
+                  </div>
+                )}
                
                <AnimatePresence>
                  {selectedRole === 'finance' && (

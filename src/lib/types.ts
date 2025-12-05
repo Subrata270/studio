@@ -1,6 +1,6 @@
 
 
-export type Role = 'poc' | 'hod' | 'finance';
+export type Role = 'poc' | 'hod' | 'finance' | 'admin';
 export type SubRole = 'apa' | 'am' | null;
 
 export interface User {
@@ -160,6 +160,14 @@ export interface AppNotification {
     message: string;
     isRead: boolean;
     createdAt: string; // ISO date string
+}
+
+export interface DeletedSubscription {
+    id: string;
+    subscription: Subscription;
+    deletedBy: string;
+    deletedAt: string;
+    justification: string;
 }
 
     
