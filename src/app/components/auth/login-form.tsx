@@ -52,7 +52,7 @@ export default function LoginForm({ role, title, subRoleOptions }: LoginFormProp
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: mockUsers.find(u => u.role === role)?.email || '',
-      password: 'password',
+      password: role === 'admin' ? 'admin123' : 'password',
       subrole: subRoleOptions ? (subRoleOptions[0] as string) : undefined,
     },
   });

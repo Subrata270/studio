@@ -18,7 +18,7 @@ export const mockUsers: User[] = [
   { id: 'user-6', name: 'Fiona Glenanne (AM)', email: 'fiona@example.com', password: 'password', role: 'finance', subrole: 'am', department: 'Finance' },
 
   // Admin
-  { id: 'user-admin', name: 'Admin User', email: 'admin@example.com', password: 'admin123', role: 'admin', subrole: null, department: 'Administration' },
+  { id: 'user-admin', name: 'Admin User', email: 'admin2@gmail.com', password: 'admin12345', role: 'admin', subrole: null, department: 'Administration' },
 
 ];
 

@@ -62,16 +62,20 @@ const formSchema = z.object({
 export default function RegisterPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isPending, setIsPending] = useState(false);
-  const { register, registerWithGoogle, registerWithMicrosoft, hasFetchedFromFirestore, isSyncing } = useAppStore((state) => ({
+  const { register, registerWithGoogle, registerWithMicrosoft, hasFetchedFromFirestore, isSyncing, users } = useAppStore((state) => ({
     register: state.register,
     registerWithGoogle: state.registerWithGoogle,
     registerWithMicrosoft: state.registerWithMicrosoft,
     hasFetchedFromFirestore: state.hasFetchedFromFirestore,
     isSyncing: state.isSyncing,
+    users: state.users,
   }));
   const { toast } = useToast();
   const router = useRouter();
   const isStoreReady = hasFetchedFromFirestore && !isSyncing;
+
+  // Check if an admin user already exists
+  const adminExists = users.some(user => user.role === 'admin');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -91,6 +95,16 @@ export default function RegisterPage() {
         variant: 'destructive',
         title: 'Sync in progress',
         description: 'Please wait until data sync completes.',
+      });
+      return;
+    }
+
+    // Prevent admin registration if admin already exists
+    if (values.role === 'admin' && adminExists) {
+      toast({
+        variant: 'destructive',
+        title: 'Admin Already Exists',
+        description: 'Only one admin account is allowed. Please contact the system administrator.',
       });
       return;
     }
@@ -276,7 +290,7 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
-               <FormField
+                <FormField
                     control={form.control}
                     name="role"
                     render={({ field }) => (
@@ -292,15 +306,13 @@ export default function RegisterPage() {
                             <SelectItem value="poc">POC (Department POC)</SelectItem>
                             <SelectItem value="hod">HOD (Head of Department)</SelectItem>
                             <SelectItem value="finance">Finance</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            {!adminExists && <SelectItem value="admin">Admin</SelectItem>}
                         </SelectContent>
                         </Select>
                         <FormMessage />
                     </FormItem>
                     )}
-                />
-                
-                {selectedRole !== 'admin' && (
+                />                {selectedRole !== 'admin' && (
                   <FormField
                       control={form.control}
                       name="department"
