@@ -128,7 +128,17 @@ export default function UnifiedLoginPage() {
   const handleMicrosoftSignin = async () => {
     setIsMicrosoftPending(true)
     try {
-      const user = await autoLoginWithMicrosoft()
+      const portalInfo = portalMapping[selectedPortal as string]
+      if (!portalInfo) {
+        toast({ variant: 'destructive', title: 'Invalid Portal', description: 'Please select a portal before using Microsoft sign-in.' })
+        setIsMicrosoftPending(false)
+        return
+      }
+
+      const expectedRole = portalInfo.role
+      const expectedSubrole = portalInfo.role === 'finance' ? (form.getValues('financeRole') as SubRole) : null
+
+      const user = await autoLoginWithMicrosoft(expectedRole, expectedSubrole)
       if (user) {
         toast({
           title: "Login Successful",

@@ -23,9 +23,9 @@ interface AppState {
   registerWithGoogle: () => Promise<User | null>;
   registerWithMicrosoft: (role?: Role, subrole?: SubRole, department?: string) => Promise<User | null>;
   login: (email: string, password: string, role: Role, subrole?: SubRole) => User | null;
-  loginWithGoogle: (role: Role, subrole?: SubRole) => Promise<User | null>;
-  loginWithMicrosoft: (role: Role, subrole?: SubRole) => Promise<User | null>;
-  autoLoginWithMicrosoft: () => Promise<User | null>;
+  loginWithGoogle: (role: Role, subrole?: SubRole, department?: string) => Promise<User | null>;
+  loginWithMicrosoft: (role: Role, subrole?: SubRole, department?: string) => Promise<User | null>;
+  autoLoginWithMicrosoft: (role?: Role, subrole?: SubRole, department?: string) => Promise<User | null>;
   logout: () => void;
   checkSession: () => boolean;
   updateUserRole: (email: string, role: Role, subrole?: SubRole | null, department?: string) => Promise<void>;
@@ -286,10 +286,20 @@ export const useAppStore = create<AppState>()(
                 throw new Error("Could not retrieve email from Google account.");
             }
 
-            const appUser = get().users.find(u => u.email === googleUser.email);
-            
+            const email = googleUser.email.toLowerCase();
+            const usersWithEmail = get().users.filter(u => (u.email || '').toLowerCase() === email);
+
+            // Try to find a user that exactly matches the selected portal (role/subrole/department)
+            const appUser = usersWithEmail.find(u =>
+              u.role === role &&
+              (role !== 'finance' || u.subrole === subrole)
+            );
+
             if (!appUser) {
-                throw new Error("You are not registered. Please create an account or contact an administrator.");
+              if (usersWithEmail.length > 0) {
+                throw new Error("Access Denied: This Microsoft/Google account exists but is not associated with the selected portal.");
+              }
+              throw new Error("You are not registered. Please create an account or contact an administrator.");
             }
 
             const isRoleMatch = appUser.role === role;
@@ -319,7 +329,7 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      loginWithMicrosoft: async (role, subrole = null) => {
+        loginWithMicrosoft: async (role, subrole = null, department = '') => {
         const { auth } = initializeFirebase();
         const provider = new OAuthProvider('microsoft.com');
         provider.setCustomParameters({ prompt: 'select_account' });
@@ -332,16 +342,26 @@ export const useAppStore = create<AppState>()(
                 throw new Error("Could not retrieve email from Microsoft account.");
             }
 
-            const appUser = get().users.find(u => u.email === microsoftUser.email);
-            
-            if (!appUser) {
-                throw new Error("You are not registered. Please create an account or contact an administrator.");
+            const email = microsoftUser.email.toLowerCase();
+            const usersWithEmail = get().users.filter(u => (u.email || '').toLowerCase() === email);
+
+          const appUser = usersWithEmail.find(u =>
+            u.role === role &&
+            (role !== 'finance' || u.subrole === subrole) &&
+            (!department || u.department === department)
+          );
+
+          if (!appUser) {
+            if (usersWithEmail.length > 0) {
+              throw new Error("Access Denied: This Microsoft account exists but is not associated with the selected portal or department.");
             }
+            throw new Error("You are not registered. Please create an account or contact an administrator.");
+          }
 
-            const isRoleMatch = appUser.role === role;
-            const isSubRoleMatch = role !== 'finance' || appUser.subrole === subrole;
+          const isRoleMatch = appUser.role === role;
+          const isSubRoleMatch = role !== 'finance' || appUser.subrole === subrole;
 
-            if (isRoleMatch && isSubRoleMatch) {
+          if (isRoleMatch && isSubRoleMatch) {
                 const updatedUser: User = { ...appUser, microsoftUid: microsoftUser.uid };
                 set(state => {
                   const updatedUsers = state.users.map(u => u.id === appUser.id ? updatedUser : u);
@@ -364,7 +384,7 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      autoLoginWithMicrosoft: async () => {
+        autoLoginWithMicrosoft: async (role?: Role, subrole: SubRole | null = null, department?: string) => {
         const { auth, firestore } = initializeFirebase();
         const provider = new OAuthProvider('microsoft.com');
         provider.setCustomParameters({ prompt: 'select_account' });
@@ -384,11 +404,29 @@ export const useAppStore = create<AppState>()(
             const usersRef = collection(firestore, 'users');
             const q = await getDocs(usersRef);
             const firestoreUsers = q.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-            const appUser = firestoreUsers.find(u => u.email === microsoftUser.email);
+            const email = microsoftUser.email.toLowerCase();
+            const usersWithEmail = firestoreUsers.filter(u => (u.email || '').toLowerCase() === email);
+
+          // If a portal role was provided, try to find a matching user for that portal
+          let appUser: User | undefined;
+          if (role) {
+            appUser = usersWithEmail.find(u =>
+              u.role === role &&
+              (role !== 'finance' || u.subrole === subrole) &&
+              (!department || u.department === department)
+            );
+          } else {
+            // Fallback: find by email (single match)
+            appUser = usersWithEmail[0];
+          }
             
             if (!appUser) {
-                console.error('❌ Microsoft login failed: User not found in Firestore');
-                throw new Error("Account not found. Please register first or contact an administrator.");
+            if (usersWithEmail.length > 0) {
+              console.error('❌ Microsoft login failed: Account exists but not for selected portal/department');
+              throw new Error("Access Denied: This Microsoft account exists but is not associated with the selected portal or department.");
+            }
+            console.error('❌ Microsoft login failed: User not found in Firestore');
+            throw new Error("Account not found. Please register first or contact an administrator.");
             }
 
             console.log('✅ Microsoft user found in Firestore:', { 
@@ -477,7 +515,7 @@ export const useAppStore = create<AppState>()(
       },
 
       updateUserRole: async (email, role, subrole = null, department) => {
-        const userToUpdate = get().users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        const userToUpdate = get().users.find(u => (u.email || '').toLowerCase() === (email || '').toLowerCase());
         
         if (!userToUpdate) {
           throw new Error("User not found with this email address.");
@@ -491,10 +529,10 @@ export const useAppStore = create<AppState>()(
         };
 
         const updatedUsers = get().users.map(u => 
-          u.email.toLowerCase() === email.toLowerCase() ? updatedUser : u
+          (u.email || '').toLowerCase() === (email || '').toLowerCase() ? updatedUser : u
         );
 
-        const isCurrentUser = get().currentUser?.email.toLowerCase() === email.toLowerCase();
+        const isCurrentUser = (get().currentUser?.email || '').toLowerCase() === (email || '').toLowerCase();
         const updatedCurrentUser = isCurrentUser ? updatedUser : get().currentUser;
 
         set({
