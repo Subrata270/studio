@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Edit, Trash2, FileText } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { Subscription } from '@/lib/types';
-import EditSubscriptionDialog from './edit-subscription-dialog';
+import EditSubscriptionDialog from '@/app/(app)/dashboard/admin/edit-subscription-dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
     AlertDialog,
